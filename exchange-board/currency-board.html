@@ -1,1 +1,482 @@
-&lt;title&gt;Exchange Board&lt;/title&gt;
+<title>Exchange Board</title>
+<style>
+  :root {
+    --ink: #14170f;
+    --ink-raised: #1c2015;
+    --ink-line: #33392a;
+    --paper: #ede9e0;
+    --paper-sunk: #e2ddd0;
+    --paper-line: #c9c2ae;
+    --text: #e9e6d8;
+    --text-dim: #a6a692;
+    --text-body: #22261a;
+    --text-body-dim: #5c5f4d;
+    --amber: #e3a13b;
+    --amber-strong: #f2b563;
+    --moss: #5c9a70;
+    --rust: #c4574a;
+    --font-display: ui-monospace, "SF Mono", "Berkeley Mono", "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+    --font-body: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color-scheme: dark;
+    --bg: var(--ink);
+    --surface: var(--ink-raised);
+    --line: var(--ink-line);
+    --fg: var(--text);
+    --fg-dim: var(--text-dim);
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      color-scheme: light;
+      --bg: var(--paper);
+      --surface: var(--paper-sunk);
+      --line: var(--paper-line);
+      --fg: var(--text-body);
+      --fg-dim: var(--text-body-dim);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: var(--ink);
+    --surface: var(--ink-raised);
+    --line: var(--ink-line);
+    --fg: var(--text);
+    --fg-dim: var(--text-dim);
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: var(--paper);
+    --surface: var(--paper-sunk);
+    --line: var(--paper-line);
+    --fg: var(--text-body);
+    --fg-dim: var(--text-body-dim);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 2.75rem 1.5rem 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2.25rem;
+  }
+
+  /* ---- Header ---- */
+  header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .eyebrow-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .eyebrow {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+
+  .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+  }
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--moss);
+    box-shadow: 0 0 0 0 rgba(92, 154, 112, 0.6);
+    animation: pulse 2.4s ease-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-dot { animation: none; }
+  }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(92, 154, 112, 0.55); }
+    70% { box-shadow: 0 0 0 7px rgba(92, 154, 112, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(92, 154, 112, 0); }
+  }
+
+  h1 {
+    margin: 0;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .sub {
+    margin: 0;
+    max-width: 52ch;
+    color: var(--fg-dim);
+    font-size: 0.98rem;
+    line-height: 1.5;
+  }
+
+  /* ---- Ledger / input row ---- */
+  .ledger {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1.4rem 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 1.5rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .field label {
+    font-family: var(--font-display);
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+
+  .amount-field { flex: 1 1 220px; }
+
+  #amount {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    font-size: 2rem;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--line);
+    color: var(--fg);
+    padding: 0.15rem 0.1rem 0.35rem;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  #amount:focus { border-color: var(--amber); }
+
+  .base-field { flex: 0 0 auto; }
+
+  #base {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 0.65rem 0.8rem;
+    cursor: pointer;
+    outline: none;
+  }
+
+  #base:focus { border-color: var(--amber); }
+
+  .hint {
+    flex: 1 1 160px;
+    font-size: 0.82rem;
+    color: var(--fg-dim);
+    line-height: 1.45;
+    align-self: center;
+  }
+
+  /* ---- Board grid ---- */
+  .board-label {
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+    margin: 0;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .tile {
+    background: var(--surface);
+    padding: 1.1rem 1.2rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    text-align: left;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    font-family: inherit;
+    transition: background-color 0.15s ease;
+  }
+
+  .tile:hover,
+  .tile:focus-visible {
+    background: var(--bg);
+  }
+
+  .tile:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: -2px;
+  }
+
+  .tile-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .tile-code {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.06em;
+    color: var(--amber);
+  }
+
+  .tile-rate {
+    font-family: var(--font-display);
+    font-size: 0.68rem;
+    color: var(--fg-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tile-value {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.55rem;
+    font-weight: 600;
+    line-height: 1.1;
+    opacity: 1;
+    transition: opacity 0.12s ease;
+  }
+
+  .tile-value.flip { opacity: 0.35; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tile-value, .tile { transition: none; }
+  }
+
+  .tile-name {
+    font-size: 0.78rem;
+    color: var(--fg-dim);
+  }
+
+  /* ---- Footer ---- */
+  footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.78rem;
+    color: var(--fg-dim);
+    line-height: 1.5;
+  }
+
+  footer strong { color: var(--fg); font-weight: 600; }
+
+  @media (max-width: 480px) {
+    .ledger { padding: 1.1rem 1.1rem; }
+    #amount { font-size: 1.6rem; }
+  }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow-row">
+      <span class="eyebrow">Exchange Board — Ref. Rates</span>
+      <span class="live"><span class="live-dot" aria-hidden="true"></span><span id="updated-badge">updated —</span></span>
+    </div>
+    <h1>Currency conversion, at a glance</h1>
+    <p class="sub">Enter an amount, pick a base currency, and every tile below recalculates. Click any tile to make that currency the new base.</p>
+  </header>
+
+  <section class="ledger" aria-label="Conversion input">
+    <div class="field amount-field">
+      <label for="amount">Amount</label>
+      <input id="amount" type="number" inputmode="decimal" value="1" min="0" step="any" />
+    </div>
+    <div class="field base-field">
+      <label for="base">Base currency</label>
+      <select id="base"></select>
+    </div>
+    <p class="hint">Rates refresh on an hourly schedule from public market data. Informational only — not for trading or settlement.</p>
+  </section>
+
+  <section aria-label="Converted amounts">
+    <p class="board-label">Converts to</p>
+    <div class="board" id="board"></div>
+  </section>
+
+  <footer>
+    <p><strong>Source.</strong> Mid-market reference rates gathered from public financial data. Figures are indicative and may lag live market pricing.</p>
+    <p id="updated-full">Last refreshed —</p>
+  </footer>
+</div>
+
+<script>
+  // Value of 1 USD expressed in each currency. Replaced wholesale on each scheduled refresh.
+  const RATES = {
+    USD: 1,
+    EUR: 0.8650,
+    GBP: 0.7418,
+    JPY: 158.410,
+    PLN: 3.7395,
+    CHF: 0.8090,
+    CAD: 1.3954,
+    AUD: 1.4302,
+    CNY: 6.7469,
+    INR: 95.115
+  };
+
+  const NAMES = {
+    USD: "US Dollar",
+    EUR: "Euro",
+    GBP: "British Pound",
+    JPY: "Japanese Yen",
+    PLN: "Polish Złoty",
+    CHF: "Swiss Franc",
+    CAD: "Canadian Dollar",
+    AUD: "Australian Dollar",
+    CNY: "Chinese Yuan",
+    INR: "Indian Rupee"
+  };
+
+  const LAST_UPDATED = "2026-08-08T05:43:00Z";
+
+  const CODES = Object.keys(RATES);
+
+  const state = {
+    amount: 1,
+    base: "USD"
+  };
+
+  const amountInput = document.getElementById("amount");
+  const baseSelect = document.getElementById("base");
+  const board = document.getElementById("board");
+
+  function formatValue(v) {
+    const abs = Math.abs(v);
+    const digits = abs !== 0 && abs < 1 ? 4 : abs < 100 ? 2 : 0;
+    return v.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  }
+
+  function populateBaseSelect() {
+    baseSelect.innerHTML = "";
+    CODES.forEach((code) => {
+      const opt = document.createElement("option");
+      opt.value = code;
+      opt.textContent = code + " — " + NAMES[code];
+      baseSelect.appendChild(opt);
+    });
+    baseSelect.value = state.base;
+  }
+
+  function buildBoard() {
+    board.innerHTML = "";
+    CODES.filter((code) => code !== state.base).forEach((code) => {
+      const tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = "tile";
+      tile.dataset.code = code;
+      tile.setAttribute("aria-label", "Make " + code + " the base currency");
+      tile.innerHTML =
+        '<div class="tile-top">' +
+          '<span class="tile-code">' + code + '</span>' +
+          '<span class="tile-rate" data-rate></span>' +
+        '</div>' +
+        '<div class="tile-value" data-value>—</div>' +
+        '<div class="tile-name">' + NAMES[code] + '</div>';
+      tile.addEventListener("click", () => {
+        const converted = state.amount * (RATES[code] / RATES[state.base]);
+        state.base = code;
+        state.amount = Number(converted.toFixed(6));
+        amountInput.value = formatValue(state.amount);
+        populateBaseSelect();
+        buildBoard();
+      });
+      board.appendChild(tile);
+    });
+    render();
+  }
+
+  function render() {
+    const amount = state.amount;
+    const baseRate = RATES[state.base];
+    document.querySelectorAll(".tile").forEach((tile) => {
+      const code = tile.dataset.code;
+      const value = amount * (RATES[code] / baseRate);
+      const valueEl = tile.querySelector("[data-value]");
+      const rateEl = tile.querySelector("[data-rate]");
+      valueEl.classList.add("flip");
+      requestAnimationFrame(() => {
+        valueEl.textContent = formatValue(value);
+        valueEl.classList.remove("flip");
+      });
+      rateEl.textContent = "1 " + state.base + " = " + formatValue(RATES[code] / baseRate) + " " + code;
+    });
+  }
+
+  amountInput.addEventListener("input", () => {
+    const v = parseFloat(amountInput.value);
+    state.amount = Number.isFinite(v) ? v : 0;
+    render();
+  });
+
+  baseSelect.addEventListener("change", () => {
+    state.base = baseSelect.value;
+    buildBoard();
+  });
+
+  function renderTimestamp() {
+    const d = new Date(LAST_UPDATED);
+    const dateStr = d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    const timeStr = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
+    document.getElementById("updated-badge").textContent = "updated " + dateStr;
+    document.getElementById("updated-full").textContent = "Last refreshed " + dateStr + ", " + timeStr + ". Refreshes hourly.";
+  }
+
+  populateBaseSelect();
+  buildBoard();
+  renderTimestamp();
+</script>
