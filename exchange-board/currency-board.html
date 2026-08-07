@@ -1,4 +1,4 @@
-<title>Exchange Board</title>
+<title>Tablica Kursów Walut</title>
 <style>
   :root {
     --ink: #14170f;
@@ -324,33 +324,33 @@
 <div class="page">
   <header>
     <div class="eyebrow-row">
-      <span class="eyebrow">Exchange Board — Ref. Rates</span>
-      <span class="live"><span class="live-dot" aria-hidden="true"></span><span id="updated-badge">updated —</span></span>
+      <span class="eyebrow">Tablica Kursów — Kursy Referencyjne</span>
+      <span class="live"><span class="live-dot" aria-hidden="true"></span><span id="updated-badge">aktualizacja —</span></span>
     </div>
-    <h1>Currency conversion, at a glance</h1>
-    <p class="sub">Enter an amount, pick a base currency, and every tile below recalculates. Click any tile to make that currency the new base.</p>
+    <h1>Przeliczanie walut na pierwszy rzut oka</h1>
+    <p class="sub">Wpisz kwotę, wybierz walutę bazową, a każda płytka poniżej przeliczy się automatycznie. Kliknij dowolną płytkę, aby ustawić ją jako nową walutę bazową.</p>
   </header>
 
-  <section class="ledger" aria-label="Conversion input">
+  <section class="ledger" aria-label="Pole przeliczania">
     <div class="field amount-field">
-      <label for="amount">Amount</label>
+      <label for="amount">Kwota</label>
       <input id="amount" type="number" inputmode="decimal" value="1" min="0" step="any" />
     </div>
     <div class="field base-field">
-      <label for="base">Base currency</label>
+      <label for="base">Waluta bazowa</label>
       <select id="base"></select>
     </div>
-    <p class="hint">Rates refresh on an hourly schedule from public market data. Informational only — not for trading or settlement.</p>
+    <p class="hint">Kursy odświeżają się co godzinę na podstawie publicznych danych rynkowych. Wyłącznie informacyjnie — nie do celów handlowych ani rozliczeniowych.</p>
   </section>
 
-  <section aria-label="Converted amounts">
-    <p class="board-label">Converts to</p>
+  <section aria-label="Przeliczone kwoty">
+    <p class="board-label">Przelicza na</p>
     <div class="board" id="board"></div>
   </section>
 
   <footer>
-    <p><strong>Source.</strong> Mid-market reference rates gathered from public financial data. Figures are indicative and may lag live market pricing.</p>
-    <p id="updated-full">Last refreshed —</p>
+    <p><strong>Źródło.</strong> Kursy referencyjne średniego rynku zebrane z publicznych danych finansowych. Wartości mają charakter orientacyjny i mogą odbiegać od bieżących kursów rynkowych.</p>
+    <p id="updated-full">Ostatnia aktualizacja —</p>
   </footer>
 </div>
 
@@ -370,16 +370,16 @@
   };
 
   const NAMES = {
-    USD: "US Dollar",
+    USD: "Dolar amerykański",
     EUR: "Euro",
-    GBP: "British Pound",
-    JPY: "Japanese Yen",
-    PLN: "Polish Złoty",
-    CHF: "Swiss Franc",
-    CAD: "Canadian Dollar",
-    AUD: "Australian Dollar",
-    CNY: "Chinese Yuan",
-    INR: "Indian Rupee"
+    GBP: "Funt brytyjski",
+    JPY: "Jen japoński",
+    PLN: "Polski złoty",
+    CHF: "Frank szwajcarski",
+    CAD: "Dolar kanadyjski",
+    AUD: "Dolar australijski",
+    CNY: "Chiński juan",
+    INR: "Rupia indyjska"
   };
 
   const LAST_UPDATED = "2026-08-07T19:41:00Z";
@@ -398,7 +398,7 @@
   function formatValue(v) {
     const abs = Math.abs(v);
     const digits = abs !== 0 && abs < 1 ? 4 : abs < 100 ? 2 : 0;
-    return v.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    return v.toLocaleString("pl-PL", { minimumFractionDigits: digits, maximumFractionDigits: digits });
   }
 
   function populateBaseSelect() {
@@ -419,7 +419,7 @@
       tile.type = "button";
       tile.className = "tile";
       tile.dataset.code = code;
-      tile.setAttribute("aria-label", "Make " + code + " the base currency");
+      tile.setAttribute("aria-label", "Ustaw " + code + " jako walutę bazową");
       tile.innerHTML =
         '<div class="tile-top">' +
           '<span class="tile-code">' + code + '</span>' +
@@ -470,10 +470,10 @@
 
   function renderTimestamp() {
     const d = new Date(LAST_UPDATED);
-    const dateStr = d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-    const timeStr = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
-    document.getElementById("updated-badge").textContent = "updated " + dateStr;
-    document.getElementById("updated-full").textContent = "Last refreshed " + dateStr + ", " + timeStr + ". Refreshes hourly.";
+    const dateStr = d.toLocaleDateString("pl-PL", { year: "numeric", month: "short", day: "numeric" });
+    const timeStr = d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
+    document.getElementById("updated-badge").textContent = "aktualizacja " + dateStr;
+    document.getElementById("updated-full").textContent = "Ostatnia aktualizacja " + dateStr + ", " + timeStr + ". Odświeża się co godzinę.";
   }
 
   populateBaseSelect();
