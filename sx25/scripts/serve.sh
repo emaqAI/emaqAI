@@ -60,17 +60,21 @@ runtime_conf="$SX25_ROOT/dnsmasq.runtime.conf"
 render "$SX25_PROJECT_DIR/config/dnsmasq.conf" > "$runtime_conf"
 sx25_saved "konfiguracja dnsmasq: $runtime_conf"
 
-# 5) Serwer HTTP w tle
+# 5) Serwer HTTP w tle (statyka + odbiór zdalnych logów na /upload/)
+mkdir -p "$SX25_LOG_DIR/clients"
 start_http() {
-  ( cd "$SX25_HTTP_ROOT" && \
-    if command -v python3 >/dev/null 2>&1; then
-      exec python3 -m http.server "$SX25_HTTP_PORT" --bind 0.0.0.0
-    elif command -v busybox >/dev/null 2>&1; then
-      exec busybox httpd -f -p "0.0.0.0:$SX25_HTTP_PORT" -h "$SX25_HTTP_ROOT"
-    else
-      die "Brak python3 i busybox — nie mam czym serwować HTTP."
-    fi ) &
-  HTTP_PID=$!
+  if command -v python3 >/dev/null 2>&1; then
+    python3 "$SX25_PROJECT_DIR/scripts/sx25-httpd.py" \
+      "$SX25_HTTP_ROOT" "$SX25_HTTP_PORT" "$SX25_LOG_DIR" &
+    HTTP_PID=$!
+    sx25_info "Odbiór zdalnych logów klientów: http://$SX25_SERVER_IP:$SX25_HTTP_PORT/upload/ → $SX25_LOG_DIR/clients/"
+  elif command -v busybox >/dev/null 2>&1; then
+    ( cd "$SX25_HTTP_ROOT" && exec busybox httpd -f -p "0.0.0.0:$SX25_HTTP_PORT" -h "$SX25_HTTP_ROOT" ) &
+    HTTP_PID=$!
+    sx25_skip "Odbiór zdalnych logów" "busybox httpd nie obsługuje uploadu — zainstaluj python3, by zbierać logi klientów."
+  else
+    die "Brak python3 i busybox — nie mam czym serwować HTTP."
+  fi
 }
 
 HTTP_PID=""

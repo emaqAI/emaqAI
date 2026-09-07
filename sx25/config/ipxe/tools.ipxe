@@ -45,11 +45,11 @@ goto boot_alpine
 kernel ${distros}/alpine64/vmlinuz-lts initrd=initramfs-lts quiet
 initrd ${distros}/alpine64/initramfs-lts
 iseq ${ovl} "" && goto boot_plain ||
-imgargs vmlinuz-lts modloop=${distros}/alpine64/modloop-lts alpine_repo=http://dl-cdn.alpinelinux.org/alpine/${alpine_ver}/main apkovl=${overlays}/${ovl} sx25_autostart=${autostart} ip=dhcp
+imgargs vmlinuz-lts modloop=${distros}/alpine64/modloop-lts alpine_repo=http://dl-cdn.alpinelinux.org/alpine/${alpine_ver}/main apkovl=${overlays}/${ovl} sx25_autostart=${autostart} sx25_log_url=http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/upload ip=dhcp
 boot || goto failed
 
 :boot_plain
-imgargs vmlinuz-lts modloop=${distros}/alpine64/modloop-lts alpine_repo=http://dl-cdn.alpinelinux.org/alpine/${alpine_ver}/main ip=dhcp
+imgargs vmlinuz-lts modloop=${distros}/alpine64/modloop-lts alpine_repo=http://dl-cdn.alpinelinux.org/alpine/${alpine_ver}/main sx25_log_url=http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/upload ip=dhcp
 boot || goto failed
 
 :failed

@@ -14,3 +14,7 @@ build/
 # Dzienniki (runtime) — nie trzymamy ich w repo.
 logs/
 *.txt
+
+# Python
+__pycache__/
+*.pyc

@@ -1,0 +1,36 @@
+#!/bin/sh
+# SX25 — wyślij lokalne dzienniki klienta (/var/log/sx25/*.txt) na serwer SX25.
+# Adres bierze z parametru jądra sx25_log_url=http://IP:PORT/upload (ustawia menu).
+# Bezpieczny best-effort: brak URL/sieci = po prostu nic nie robi.
+. /usr/local/lib/sx25/log.sh 2>/dev/null || true
+
+LOG_URL=$(sed -n 's/.*sx25_log_url=\([^ ]*\).*/\1/p' /proc/cmdline 2>/dev/null)
+[ -z "$LOG_URL" ] && { echo "SX25: brak sx25_log_url w cmdline — pomijam wysyłkę logów."; exit 0; }
+
+HOST=$(hostname 2>/dev/null || echo klient)
+IP=$(ip -4 addr show scope global 2>/dev/null | awk '/inet/{print $2; exit}' | cut -d/ -f1)
+TAG="${HOST}_${IP:-noip}"
+
+upload_one() {
+  f="$1"; name="${TAG}_$(basename "$f")"
+  url="${LOG_URL%/}/$name"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsS -T "$f" "$url" >/dev/null 2>&1
+  elif command -v wget >/dev/null 2>&1 && wget --help 2>&1 | grep -q -- '--method'; then
+    wget -q --method=PUT --body-file="$f" -O /dev/null "$url"
+  else
+    return 2
+  fi
+}
+
+rc_any=1
+for f in /var/log/sx25/*.txt; do
+  [ -f "$f" ] || continue
+  if upload_one "$f"; then
+    echo "SX25: wysłano dziennik $(basename "$f") -> $LOG_URL"
+    rc_any=0
+  else
+    echo "SX25: nie udało się wysłać $(basename "$f") (brak curl/wget-PUT lub sieci)." >&2
+  fi
+done
+exit "$rc_any"

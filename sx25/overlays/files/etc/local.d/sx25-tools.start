@@ -16,6 +16,11 @@ sx25c_run "Aktualizacja indeksów apk" \
   "Brak łącza do serwerów Alpine — sprawdź sieć/proxy." \
   apk update
 
+# curl — do wysyłki dzienników na serwer SX25 (zdalne zbieranie logów).
+sx25c_run "Instalacja curl (wysyłka logów)" \
+  "Bez curl/wget-PUT logi klienta zostaną tylko lokalnie (/var/log/sx25)." \
+  apk add curl || true
+
 # --- SSH (zawsze) ------------------------------------------------------------
 if sx25c_run "Instalacja openssh" "Sprawdź sieć/repo community." apk add openssh; then
   if [ -f /etc/ssh/sshd_config ] && ! grep -q '^Include /etc/ssh/sshd_config.d/\*.conf' /etc/ssh/sshd_config; then
@@ -61,6 +66,13 @@ if [ -f /etc/sx25/toolbox ]; then
   fi
 else
   sx25c_info "Tryb BASE — bez DOSBox/box64 (tylko SSH i narzędzia bazowe)."
+fi
+
+# --- Wysyłka dzienników startowych na serwer SX25 (best-effort) ---------------
+if [ -x /usr/local/bin/sx25-uplog ]; then
+  sx25c_run "Wysyłka dzienników klienta na serwer SX25" \
+    "Sprawdź sx25_log_url w cmdline oraz dostępność serwera HTTP (/upload)." \
+    /usr/local/bin/sx25-uplog || true
 fi
 
 exit 0

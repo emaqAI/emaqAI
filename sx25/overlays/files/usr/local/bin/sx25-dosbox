@@ -3,6 +3,9 @@
 . /usr/local/lib/sx25/log.sh
 sx25c_init "dosbox"
 
+# Przy każdym wyjściu spróbuj wysłać dziennik na serwer SX25 (best-effort).
+trap '[ -x /usr/local/bin/sx25-uplog ] && /usr/local/bin/sx25-uplog >/dev/null 2>&1 || true' EXIT
+
 if ! command -v dosbox >/dev/null 2>&1; then
   sx25c_err "DOSBox nie jest zainstalowany" \
     "Instalacja odbywa się przy starcie (apk add dosbox). Sprawdź dziennik toolbox_*.txt i sieć."

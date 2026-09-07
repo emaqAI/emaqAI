@@ -14,7 +14,28 @@ dane zdarzenie oznacza i co z nim zrobić. Logi są zwykłymi plikami `.txt`.
 - Serwer: jeśli katalog `/srv` jest niepisalny (brak roota), logi lądują w
   `sx25/logs/` w repo (ten katalog jest w `.gitignore`).
 - Klient (netboot): środowisko jest ulotne — logi żyją w RAM do restartu.
-  Skopiuj je przez SSH, jeśli chcesz zachować (`scp root@<IP>:/var/log/sx25/* .`).
+  Dlatego SX25 **zbiera je zdalnie** (patrz niżej); można też skopiować ręcznie
+  przez SSH (`scp root@<IP>:/var/log/sx25/* .`).
+
+## Zdalne zbieranie logów klientów
+
+Aby dzienniki nie ginęły po restarcie ulotnego klienta, są **wysyłane na
+serwer SX25**:
+
+1. Serwer HTTP (`scripts/sx25-httpd.py`, uruchamiany przez `serve.sh`) przyjmuje
+   pliki metodą `PUT`/`POST` na `/upload/<nazwa>` i zapisuje je do
+   `/srv/sx25/logs/clients/` (nazwa jest sanityzowana — bez wyjścia poza katalog).
+2. Klient dostaje adres w parametrze jądra `sx25_log_url=http://IP:PORT/upload`
+   (ustawiany w menu iPXE dla obrazów Alpine).
+3. Skrypt `sx25-uplog` na kliencie wysyła `/var/log/sx25/*.txt` (przez `curl -T`
+   lub `wget --method=PUT`). Uruchamiany jest na koniec startu oraz przy wyjściu
+   z DOSBox. Nazwa pliku na serwerze zawiera host i IP klienta.
+
+Best-effort: brak `sx25_log_url`, sieci lub `curl`/`wget-PUT` = wysyłka jest po
+prostu pomijana (odnotowana w logu), a lokalne logi i tak pozostają.
+
+Wymaga `python3` na serwerze (busybox httpd nie obsługuje uploadu — wtedy
+`serve.sh` odnotuje to jako `[NIEZREALIZOWANE]`).
 
 ## Znaczniki zdarzeń
 
