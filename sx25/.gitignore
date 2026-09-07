@@ -1,0 +1,12 @@
+# Runtime / pobierane artefakty — nie trzymamy ich w repo.
+/srv/
+*.iso
+*.img
+*.apkovl.tar.gz
+vmlinuz*
+initramfs*
+initrd*
+modloop*
+core*.gz
+dnsmasq.runtime.conf
+build/

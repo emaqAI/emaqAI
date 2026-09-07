@@ -1,0 +1,31 @@
+# SX25 — manifest obrazów netboot
+#
+# Format (pola rozdzielone znakiem "|"):
+#   id | arch | kernel_url | initrd_url | extra_url
+#
+#   id         — identyfikator, zarazem katalog docelowy: http/distros/<id>/
+#   arch       — x86_64 lub i386 (informacyjnie/dla menu)
+#   kernel_url — URL do jądra (vmlinuz)   [wymagane]
+#   initrd_url — URL do initrd/initramfs  [wymagane]
+#   extra_url  — dodatkowy plik (np. modloop/squashfs) [opcjonalne, może być puste]
+#
+# Linie zaczynające się od # są pomijane. Puste extra_url zostaw jako ""
+# lub po prostu nie dodawaj kolejnego "|".
+#
+# Uwaga: adresy URL i numery wersji z czasem się dezaktualizują — sprawdź
+# oficjalne katalogi netboot dystrybucji i zaktualizuj wpisy.
+
+# ---------------------------------------------------------------------------
+# Lekkie Linuksy — x86-64
+# ---------------------------------------------------------------------------
+alpine64|x86_64|https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/x86_64/netboot/vmlinuz-lts|https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/x86_64/netboot/initramfs-lts|https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/x86_64/netboot/modloop-lts
+debian64|x86_64|https://deb.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/debian-installer/amd64/linux|https://deb.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/debian-installer/amd64/initrd.gz|
+tinycore64|x86_64|http://tinycorelinux.net/15.x/x86_64/release/distribution_files/vmlinuz64|http://tinycorelinux.net/15.x/x86_64/release/distribution_files/corepure64.gz|
+sysrescue64|x86_64|https://fastly-cdn.system-rescue.org/releases/11.03/systemrescue-11.03-amd64.iso|_ISO_|
+
+# ---------------------------------------------------------------------------
+# Lekkie Linuksy — x86-32 (i386)
+# ---------------------------------------------------------------------------
+alpine32|i386|https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/x86/netboot/vmlinuz-lts|https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/x86/netboot/initramfs-lts|https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/x86/netboot/modloop-lts
+debian32|i386|https://deb.debian.org/debian/dists/stable/main/installer-i386/current/images/netboot/debian-installer/i386/linux|https://deb.debian.org/debian/dists/stable/main/installer-i386/current/images/netboot/debian-installer/i386/initrd.gz|
+tinycore32|i386|http://tinycorelinux.net/15.x/x86/release/distribution_files/vmlinuz|http://tinycorelinux.net/15.x/x86/release/distribution_files/core.gz|

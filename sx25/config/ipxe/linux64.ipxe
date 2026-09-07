@@ -1,0 +1,43 @@
+#!ipxe
+# SX25 — lekkie dystrybucje x86-64
+set distros http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/distros
+set alpine_ver v3.21
+
+:start
+menu Lekkie Linuksy — x86-64
+item alpine64    Alpine Linux (LTS, x86_64)  — bardzo lekki
+item debian64    Debian Installer (netinst, amd64)
+item tinycore64  Tiny Core Linux (corepure64)
+item sysrescue64 SystemRescue (amd64, ratunkowy)
+item --gap --
+item back        <  Powrót
+choose selected || goto back
+goto ${selected}
+
+:alpine64
+kernel ${distros}/alpine64/vmlinuz-lts initrd=initramfs-lts modules=loop,squashfs,sd-mod,usb-storage quiet
+initrd ${distros}/alpine64/initramfs-lts
+imgargs vmlinuz-lts modloop=${distros}/alpine64/modloop-lts alpine_repo=http://dl-cdn.alpinelinux.org/alpine/${alpine_ver}/main ip=dhcp
+boot || goto failed
+
+:debian64
+kernel ${distros}/debian64/linux
+initrd ${distros}/debian64/initrd.gz
+boot || goto failed
+
+:tinycore64
+kernel ${distros}/tinycore64/vmlinuz64 loglevel=3
+initrd ${distros}/tinycore64/corepure64.gz
+boot || goto failed
+
+:sysrescue64
+# Rozruch obrazu ISO przez emulację iPXE (isohybrid).
+sanboot --no-describe ${distros}/sysrescue64/system.iso || goto failed
+
+:failed
+echo Rozruch nie powiódł się. Sprawdź, czy obrazy zostały pobrane (fetch-distros.sh).
+prompt Naciśnij dowolny klawisz, aby wrócić...
+goto start
+
+:back
+chain http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/boot/menu.ipxe

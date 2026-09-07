@@ -1,0 +1,10 @@
+
+  SX25 Toolbox (Alpine netboot)
+  --------------------------------
+  Zainstalowane best-effort: dosbox, box64
+    dosbox            - uruchom emulator DOS
+    box64 ./program   - uruchom binarium x86_64 (gł. na hostach ARM)
+
+  Menu iPXE mogło ustawić autostart (sx25_autostart=...).
+  Środowisko jest ulotne (netboot) - zmiany nie przetrwają restartu.
+

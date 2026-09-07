@@ -1,0 +1,47 @@
+#!ipxe
+# SX25 — menu główne
+# Znaczniki @SX25_*@ podstawia scripts/serve.sh przy kopiowaniu do katalogu HTTP.
+set base http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/boot
+set distros http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/distros
+
+:start
+menu SX25 Multi-Boot PXE
+item --gap --                Lekkie Linuksy (x86-64)
+item linux64                  >  Dystrybucje 64-bit
+item --gap --                Lekkie Linuksy (x86-32 / i386)
+item linux32                  >  Dystrybucje 32-bit
+item --gap --                Narzędzia / środowiska
+item tools                    >  DOSBox, box64, narzędzia
+item --gap --                System
+item netbootxyz              Chainload netboot.xyz (setki systemów)
+item shell                   Powłoka iPXE
+item reboot                  Restart
+item exit                    Wyjście z rozruchu sieciowego
+choose --timeout 300000 --default linux64 selected || goto start
+goto ${selected}
+
+:linux64
+chain ${base}/linux64.ipxe || goto start
+
+:linux32
+chain ${base}/linux32.ipxe || goto start
+
+:tools
+chain ${base}/tools.ipxe || goto start
+
+:netbootxyz
+# Solidny wariant awaryjny: pełne menu netboot.xyz utrzymywane społecznościowo.
+chain --autofree http://boot.netboot.xyz/ipxe/netboot.xyz.efi ||
+chain --autofree http://boot.netboot.xyz/ipxe/netboot.xyz.lkrn ||
+goto start
+
+:shell
+echo Powłoka iPXE. Wpisz 'exit', aby wrócić do menu.
+shell
+goto start
+
+:reboot
+reboot
+
+:exit
+exit

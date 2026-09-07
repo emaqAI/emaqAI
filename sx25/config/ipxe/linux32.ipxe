@@ -1,0 +1,38 @@
+#!ipxe
+# SX25 — lekkie dystrybucje x86-32 (i386)
+set distros http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/distros
+set alpine_ver v3.21
+
+:start
+menu Lekkie Linuksy — x86-32 (i386)
+item alpine32    Alpine Linux (LTS, x86 / i386)
+item debian32    Debian Installer (netinst, i386)
+item tinycore32  Tiny Core Linux (core, 32-bit)
+item --gap --
+item back        <  Powrót
+choose selected || goto back
+goto ${selected}
+
+:alpine32
+kernel ${distros}/alpine32/vmlinuz-lts initrd=initramfs-lts modules=loop,squashfs,sd-mod,usb-storage quiet
+initrd ${distros}/alpine32/initramfs-lts
+imgargs vmlinuz-lts modloop=${distros}/alpine32/modloop-lts alpine_repo=http://dl-cdn.alpinelinux.org/alpine/${alpine_ver}/main ip=dhcp
+boot || goto failed
+
+:debian32
+kernel ${distros}/debian32/linux
+initrd ${distros}/debian32/initrd.gz
+boot || goto failed
+
+:tinycore32
+kernel ${distros}/tinycore32/vmlinuz loglevel=3
+initrd ${distros}/tinycore32/core.gz
+boot || goto failed
+
+:failed
+echo Rozruch nie powiódł się. Sprawdź, czy obrazy zostały pobrane (fetch-distros.sh).
+prompt Naciśnij dowolny klawisz, aby wrócić...
+goto start
+
+:back
+chain http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/boot/menu.ipxe

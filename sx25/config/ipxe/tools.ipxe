@@ -1,0 +1,61 @@
+#!ipxe
+# SX25 — narzędzia / środowiska (DOSBox, box64, powłoka)
+#
+# Wszystkie pozycje uruchamiają lekki Alpine Linux z nakładką (apkovl), która
+# doinstalowuje i konfiguruje dane narzędzie. Nakładki budujesz skryptem
+# scripts/build-overlay.sh, a serve.sh udostępnia je pod /overlays.
+set distros  http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/distros
+set overlays http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/overlays
+set base     http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/boot
+set alpine_ver v3.21
+
+:start
+menu Narzędzia / środowiska
+item dosbox   DOSBox  — emulator DOS (na bazie Alpine)
+item box64    box64   — uruchamianie binariów x86_64 (na bazie Alpine)
+item toolbox  Toolbox — Alpine z DOSBox + box64 + narzędziami
+item shell    Czysty Alpine (powłoka)
+item --gap --
+item back     <  Powrót
+choose selected || goto back
+goto ${selected}
+
+# Wspólna procedura rozruchu Alpine z wybraną nakładką: ustaw ${ovl} i skocz.
+:dosbox
+set ovl toolbox.apkovl.tar.gz
+set autostart dosbox
+goto boot_alpine
+
+:box64
+set ovl toolbox.apkovl.tar.gz
+set autostart box64
+goto boot_alpine
+
+:toolbox
+set ovl toolbox.apkovl.tar.gz
+set autostart shell
+goto boot_alpine
+
+:shell
+set ovl ""
+set autostart shell
+goto boot_alpine
+
+:boot_alpine
+kernel ${distros}/alpine64/vmlinuz-lts initrd=initramfs-lts quiet
+initrd ${distros}/alpine64/initramfs-lts
+iseq ${ovl} "" && goto boot_plain ||
+imgargs vmlinuz-lts modloop=${distros}/alpine64/modloop-lts alpine_repo=http://dl-cdn.alpinelinux.org/alpine/${alpine_ver}/main apkovl=${overlays}/${ovl} sx25_autostart=${autostart} ip=dhcp
+boot || goto failed
+
+:boot_plain
+imgargs vmlinuz-lts modloop=${distros}/alpine64/modloop-lts alpine_repo=http://dl-cdn.alpinelinux.org/alpine/${alpine_ver}/main ip=dhcp
+boot || goto failed
+
+:failed
+echo Rozruch nie powiódł się. Sprawdź obrazy (fetch-distros.sh) i nakładki (build-overlay.sh).
+prompt Naciśnij dowolny klawisz, aby wrócić...
+goto start
+
+:back
+chain ${base}/menu.ipxe

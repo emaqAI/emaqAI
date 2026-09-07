@@ -1,0 +1,17 @@
+#!/bin/sh
+# SX25 toolbox — uruchamiane przy starcie Alpine (usługa 'local').
+# Doinstalowuje narzędzia po podniesieniu sieci.
+set +e
+
+# Włącz repozytorium community (tam jest m.in. dosbox) i zaktualizuj indeksy.
+setup-apkrepos -1 >/dev/null 2>&1 || true
+apk update >/dev/null 2>&1 || true
+
+# DOSBox — emulator DOS (repo community).
+apk add dosbox >/dev/null 2>&1 || echo "SX25: nie udało się zainstalować dosbox" >&2
+
+# box64 — uruchamianie binariów x86_64 (dostępny głównie na ARM/RISC-V;
+# na hoście x86 zwykle zbędny — instalujemy best-effort zgodnie z życzeniem).
+apk add box64 >/dev/null 2>&1 || echo "SX25: box64 niedostępny w repo dla tej architektury" >&2
+
+exit 0
