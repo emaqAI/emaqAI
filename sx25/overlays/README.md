@@ -9,10 +9,26 @@ w ulotnym środowisku Alpine.
 
 ```
 files/
-├── etc/local.d/sx25-tools.start   # przy starcie: apk add dosbox, box64
+├── etc/local.d/sx25-tools.start   # przy starcie: apk add dosbox, box64, openssh + start sshd
+├── etc/ssh/sshd_config.d/10-sx25.conf  # SSH tylko kluczem (root, bez hasła)
 ├── etc/motd                       # komunikat powitalny
+├── root/.ssh/authorized_keys      # klucze publiczne uprawnione do logowania
 └── root/.profile                  # autostart wg sx25_autostart=dosbox|box64
 ```
+
+## Dostęp SSH
+
+Nakładka instaluje `openssh`, generuje klucze hosta i startuje `sshd` przy
+rozruchu. Logowanie jest **tylko kluczem** (root, bez hasła) — dozwolone klucze
+publiczne są w `files/root/.ssh/authorized_keys`.
+
+```bash
+# z innej maszyny (IP klienta odczytasz z konsoli, np. `ip a`):
+ssh root@<IP-klienta>
+```
+
+Aby dodać kolejny klucz, dopisz go w osobnej linii do `authorized_keys` i
+przebuduj nakładkę (`build-overlay.sh`).
 
 ## Budowa nakładki
 

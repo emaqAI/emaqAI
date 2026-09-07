@@ -5,6 +5,9 @@
     dosbox            - uruchom emulator DOS
     box64 ./program   - uruchom binarium x86_64 (gł. na hostach ARM)
 
+  SSH: sshd wystartowany, logowanie kluczem jako root (bez hasła).
+    z innej maszyny:  ssh root@<IP-tej-maszyny>
+
   Menu iPXE mogło ustawić autostart (sx25_autostart=...).
   Środowisko jest ulotne (netboot) - zmiany nie przetrwają restartu.
 

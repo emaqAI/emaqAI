@@ -20,6 +20,12 @@ cp -a "$SRC/." "$STAGE/"
 # Skrypty local.d muszą być wykonywalne.
 chmod +x "$STAGE/etc/local.d/"*.start 2>/dev/null || true
 
+# Uprawnienia klucza SSH (sshd odrzuca zbyt otwarte pliki).
+if [ -d "$STAGE/root/.ssh" ]; then
+  chmod 700 "$STAGE/root/.ssh"
+  chmod 600 "$STAGE/root/.ssh/authorized_keys" 2>/dev/null || true
+fi
+
 # Włącz usługę 'local' w domyślnym runlevelu (uruchamia /etc/local.d/*.start).
 mkdir -p "$STAGE/etc/runlevels/default"
 ln -sf /etc/init.d/local "$STAGE/etc/runlevels/default/local"
@@ -29,6 +35,7 @@ mkdir -p "$STAGE/etc/apk"
 {
   echo dosbox
   echo box64
+  echo openssh
 } >> "$STAGE/etc/apk/world"
 
 log "Pakuję do $OUT ..."
