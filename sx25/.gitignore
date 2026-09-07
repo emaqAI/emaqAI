@@ -10,3 +10,7 @@ modloop*
 core*.gz
 dnsmasq.runtime.conf
 build/
+
+# Dzienniki (runtime) — nie trzymamy ich w repo.
+logs/
+*.txt

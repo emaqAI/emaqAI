@@ -6,6 +6,7 @@
 # Wymaga: git, gcc, binutils, make, perl, liblzma/xz-dev, mtools (dla .efi).
 set -euo pipefail
 source "$(dirname "$0")/common.sh"
+sx25_log_init "build-ipxe" "$@"
 
 WORK="${SX25_ROOT}/build/ipxe"
 SRC="$WORK/src"

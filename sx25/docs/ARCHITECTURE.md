@@ -55,7 +55,8 @@ SX25 w tej samej warstwie L2 (broadcast) co klienci.
 ├── http/                       # etap 2 (serwowane po HTTP)
 │   ├── boot/                   # wyrenderowane menu *.ipxe
 │   ├── distros/<id>/           # jądra, initrd, modloop, ISO
-│   └── overlays/               # toolbox.apkovl.tar.gz
+│   └── overlays/               # sx25-base + toolbox apkovl, authorized_keys
+├── logs/                       # dzienniki .txt (patrz docs/LOGI.md)
 └── dnsmasq.runtime.conf        # wygenerowany z szablonu
 ```
 
@@ -85,4 +86,12 @@ sudo SX25_SERVER_IP=10.0.0.5 SX25_SUBNET=10.0.0.0/24 ./scripts/serve.sh
 - **Kernel/initrd 404** — uruchom `fetch-distros.sh` i zweryfikuj adresy w
   `data/distros.list` (bywają dezaktualizowane).
 - **Logi** — dnsmasq startuje z `log-dhcp` i `--no-daemon`, więc widać cały
-  przebieg PXE w konsoli.
+  przebieg PXE w konsoli. Każdy skrypt zapisuje też pełny dziennik `.txt`
+  (serwer: `/srv/sx25/logs/`, klient: `/var/log/sx25/`) — patrz
+  [LOGI.md](LOGI.md).
+- **SSH nie działa w Alpine** — sprawdź, czy nakładki zbudowano
+  (`build-overlay.sh`) i czy HTTP serwuje `overlays/*.apkovl.tar.gz`; w logu
+  klienta (`/var/log/sx25/toolbox_*.txt`) znajdziesz krok instalacji openssh.
+- **DOSBox nie startuje graficznie** — zajrzyj do `/var/log/sx25/dosbox_*.txt`;
+  launcher próbuje X, potem framebuffer. Na niektórych VM brakuje FB — użyj
+  sprzętu z konsolą graficzną lub zainstaluj pełny X.

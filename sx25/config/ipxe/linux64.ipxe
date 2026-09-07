@@ -1,6 +1,7 @@
 #!ipxe
 # SX25 — lekkie dystrybucje x86-64
 set distros http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/distros
+set overlays http://@SX25_SERVER_IP@:@SX25_HTTP_PORT@/overlays
 set alpine_ver v3.21
 
 :start
@@ -15,13 +16,15 @@ choose selected || goto back
 goto ${selected}
 
 :alpine64
+# Nakładka sx25-base włącza SSH (logowanie kluczem) w uruchomionym Alpine.
 kernel ${distros}/alpine64/vmlinuz-lts initrd=initramfs-lts modules=loop,squashfs,sd-mod,usb-storage quiet
 initrd ${distros}/alpine64/initramfs-lts
-imgargs vmlinuz-lts modloop=${distros}/alpine64/modloop-lts alpine_repo=http://dl-cdn.alpinelinux.org/alpine/${alpine_ver}/main ip=dhcp
+imgargs vmlinuz-lts modloop=${distros}/alpine64/modloop-lts alpine_repo=http://dl-cdn.alpinelinux.org/alpine/${alpine_ver}/main apkovl=${overlays}/sx25-base.apkovl.tar.gz ip=dhcp
 boot || goto failed
 
 :debian64
-kernel ${distros}/debian64/linux
+# SSH do instalatora (Debian network-console): logowanie kluczem z authorized_keys.
+kernel ${distros}/debian64/linux interface=auto anna/choose_modules=network-console network-console/authorized_keys_url=${overlays}/authorized_keys
 initrd ${distros}/debian64/initrd.gz
 boot || goto failed
 

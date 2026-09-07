@@ -1,0 +1,37 @@
+#!/bin/sh
+# SX25 — launcher DOSBox z logowaniem i fallbackami (X -> framebuffer -> powłoka).
+. /usr/local/lib/sx25/log.sh
+sx25c_init "dosbox"
+
+if ! command -v dosbox >/dev/null 2>&1; then
+  sx25c_err "DOSBox nie jest zainstalowany" \
+    "Instalacja odbywa się przy starcie (apk add dosbox). Sprawdź dziennik toolbox_*.txt i sieć."
+  exec /bin/sh
+fi
+
+mkdir -p /root/dos 2>/dev/null
+
+# 1) Sesja X (najlepsza zgodność graficzna).
+if command -v startx >/dev/null 2>&1 && command -v Xorg >/dev/null 2>&1; then
+  sx25c_info "Uruchamiam DOSBox w sesji X (startx)."
+  echo 'exec dosbox' > /root/.xinitrc
+  if startx >/dev/null 2>&1; then
+    sx25c_ok "Sesja X z DOSBox zakończona."
+    exit 0
+  fi
+  sx25c_skip "DOSBox w X" "Nie udało się uruchomić X — próbuję trybu framebuffer (SDL)."
+fi
+
+# 2) SDL bezpośrednio na framebufferze konsoli.
+for drv in fbcon directfb; do
+  sx25c_info "Próba DOSBox z SDL_VIDEODRIVER=$drv"
+  if SDL_VIDEODRIVER=$drv dosbox >/dev/null 2>&1; then
+    sx25c_ok "DOSBox ($drv) zakończony."
+    exit 0
+  fi
+  sx25c_skip "DOSBox ($drv)" "Ten sterownik SDL nie zadziałał na tym sprzęcie."
+done
+
+sx25c_err "Nie udało się uruchomić DOSBox w żadnym trybie graficznym" \
+  "DOSBox wymaga X lub SDL na framebufferze. Na fizycznym sprzęcie zwykle działa; w niektórych VM brakuje FB. Otwieram powłokę — uruchom ręcznie: 'dosbox' lub 'startx'."
+exec /bin/sh

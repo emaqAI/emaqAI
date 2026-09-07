@@ -1,34 +1,66 @@
 #!/bin/sh
-# SX25 toolbox — uruchamiane przy starcie Alpine (usługa 'local').
-# Doinstalowuje narzędzia po podniesieniu sieci.
-set +e
+# SX25 — skrypt startowy Alpine (usługa 'local'). Uruchamiany przy rozruchu.
+# Zawsze: konfiguruje i startuje SSH. Dodatkowo (gdy istnieje znacznik
+# /etc/sx25/toolbox): instaluje DOSBox + box64 i przygotowuje autostart.
+# Wszystko jest logowane do /var/log/sx25/toolbox_*.txt (po polsku).
 
-# Włącz repozytorium community (tam jest m.in. dosbox) i zaktualizuj indeksy.
-setup-apkrepos -1 >/dev/null 2>&1 || true
-apk update >/dev/null 2>&1 || true
+. /usr/local/lib/sx25/log.sh
+sx25c_init "toolbox"
+trap 'rc=$?; [ "$rc" -ne 0 ] && sx25c_log "CRASH" "Skrypt startowy przerwany (kod $rc)"; sx25c_log "KONIEC" "Dziennik: $SX25_CLIENT_LOG_FILE"' EXIT
 
-# DOSBox — emulator DOS (repo community).
-apk add dosbox >/dev/null 2>&1 || echo "SX25: nie udało się zainstalować dosbox" >&2
+# --- Repozytoria + aktualizacja indeksów -------------------------------------
+sx25c_run "Włączenie repozytoriów Alpine (main+community)" \
+  "Bez repozytoriów nie doinstaluję pakietów — sprawdź sieć (ip a) i DNS." \
+  setup-apkrepos -1
+sx25c_run "Aktualizacja indeksów apk" \
+  "Brak łącza do serwerów Alpine — sprawdź sieć/proxy." \
+  apk update
 
-# box64 — uruchamianie binariów x86_64 (dostępny głównie na ARM/RISC-V;
-# na hoście x86 zwykle zbędny — instalujemy best-effort zgodnie z życzeniem).
-apk add box64 >/dev/null 2>&1 || echo "SX25: box64 niedostępny w repo dla tej architektury" >&2
-
-# --- SSH (dostęp zdalny kluczem) --------------------------------------------
-if apk add openssh >/dev/null 2>&1; then
-  # Upewnij się, że główny sshd_config dołącza pliki drop-in z sshd_config.d/.
+# --- SSH (zawsze) ------------------------------------------------------------
+if sx25c_run "Instalacja openssh" "Sprawdź sieć/repo community." apk add openssh; then
   if [ -f /etc/ssh/sshd_config ] && ! grep -q '^Include /etc/ssh/sshd_config.d/\*.conf' /etc/ssh/sshd_config; then
     printf '\nInclude /etc/ssh/sshd_config.d/*.conf\n' >> /etc/ssh/sshd_config
+    sx25c_saved "Dopisano Include sshd_config.d/*.conf do /etc/ssh/sshd_config"
   fi
-  # Uprawnienia klucza (tar mógł ich nie zachować).
-  chmod 700 /root/.ssh 2>/dev/null || true
-  chmod 600 /root/.ssh/authorized_keys 2>/dev/null || true
-  # Klucze hosta i start usługi.
-  ssh-keygen -A >/dev/null 2>&1 || true
-  rc-service sshd start >/dev/null 2>&1 || /usr/sbin/sshd 2>/dev/null || \
-    echo "SX25: nie udało się uruchomić sshd" >&2
+  chmod 700 /root/.ssh 2>/dev/null && chmod 600 /root/.ssh/authorized_keys 2>/dev/null \
+    && sx25c_ok "Ustawiono uprawnienia klucza SSH (700/600)" \
+    || sx25c_skip "Uprawnienia klucza SSH" "Brak /root/.ssh/authorized_keys — logowanie kluczem nie zadziała."
+  sx25c_run "Generowanie kluczy hosta SSH" "" ssh-keygen -A
+  if sx25c_run "Start usługi sshd" "Spróbuj ręcznie: rc-service sshd start" rc-service sshd start; then
+    sx25c_ok "SSH gotowe: ssh root@<IP-tej-maszyny> (logowanie kluczem)"
+  else
+    sx25c_run "Awaryjny start sshd" "Sprawdź /var/log oraz konfigurację sshd." /usr/sbin/sshd
+  fi
 else
-  echo "SX25: nie udało się zainstalować openssh" >&2
+  sx25c_skip "Konfiguracja SSH" "Nie zainstalowano openssh — dostęp zdalny niedostępny."
+fi
+
+# --- Część toolbox (DOSBox + box64) — tylko gdy jest znacznik ----------------
+if [ -f /etc/sx25/toolbox ]; then
+  sx25c_info "Tryb TOOLBOX — instaluję DOSBox i box64."
+  sx25c_run "Instalacja DOSBox" "Pakiet w repo community; sprawdź sieć." apk add dosbox || true
+  sx25c_run "Instalacja box64 (głównie ARM/RISC-V)" \
+    "box64 bywa niedostępny dla tej architektury — na x86 zwykle zbędny." apk add box64 || true
+  # Minimalne X do uruchomienia DOSBox w trybie graficznym (best-effort).
+  sx25c_run "Instalacja X (xorg-server, xinit, sterownik fbdev)" \
+    "Bez X DOSBox spróbuje trybu framebuffer (SDL). Jeśli i to zawiedzie — patrz sugestie launchera." \
+    apk add xorg-server xinit xf86-video-fbdev mesa-dri-gallium font-misc-misc || true
+
+  # Autostart: jeśli menu przekazało sx25_autostart!=shell, włącz autologin roota
+  # na tty1, żeby ~/.profile mogło uruchomić DOSBox/box64.
+  autostart=$(sed -n 's/.*sx25_autostart=\([^ ]*\).*/\1/p' /proc/cmdline 2>/dev/null)
+  if [ -n "$autostart" ] && [ "$autostart" != "shell" ]; then
+    if [ -f /etc/inittab ] && grep -q '^tty1::respawn:' /etc/inittab; then
+      sed -i 's|^tty1::respawn:.*|tty1::respawn:/bin/login -f root|' /etc/inittab
+      sx25c_saved "Autologin root na tty1 (dla autostartu '$autostart')"
+      kill -HUP 1 2>/dev/null && sx25c_ok "Przeładowano init (autologin aktywny)" \
+        || sx25c_skip "Przeładowanie init" "Autologin zadziała po następnym respawn tty1."
+    else
+      sx25c_skip "Autologin tty1" "Nie znaleziono wpisu tty1 w /etc/inittab."
+    fi
+  fi
+else
+  sx25c_info "Tryb BASE — bez DOSBox/box64 (tylko SSH i narzędzia bazowe)."
 fi
 
 exit 0

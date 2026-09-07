@@ -37,7 +37,7 @@ set autostart shell
 goto boot_alpine
 
 :shell
-set ovl ""
+set ovl sx25-base.apkovl.tar.gz
 set autostart shell
 goto boot_alpine
 

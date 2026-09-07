@@ -21,6 +21,25 @@ dystrybucji i zaktualizuj manifest.
 | `debian32`   | Debian Installer | kernel + initrd.gz        | Instalator netinst (i386)    |
 | `tinycore32` | Tiny Core        | kernel + core.gz          | Klasyczny 32-bit             |
 
+## Dostęp SSH wg obrazu
+
+| Obraz               | SSH | Jak                                                        |
+|---------------------|-----|-----------------------------------------------------------|
+| Alpine 64/32        | ✅  | Nakładka `sx25-base` instaluje openssh i startuje sshd    |
+| DOSBox/box64/toolbox/shell | ✅ | Nakładka `toolbox`/`sx25-base` (jak wyżej)          |
+| Debian 64/32        | ✅  | Instalator: **network-console**, klucz z `authorized_keys`|
+| Tiny Core 64/32     | ⚠️  | Ręcznie: `tce-load -wi openssh` + konfiguracja (brak persystencji) |
+| SystemRescue        | ⚠️  | Startuje sshd, ale `sanboot` ISO nie wstrzykuje kluczy — ustaw hasło w konsoli lub remasteruj ISO |
+
+Logowanie do Alpine/Debiana odbywa się **kluczem** (`workspace-17`) jako root/
+instalator. IP klienta odczytasz z jego konsoli (`ip a`).
+
+- **Debian:** parametry `anna/choose_modules=network-console` +
+  `network-console/authorized_keys_url=.../overlays/authorized_keys` (ustawione
+  w menu) włączają zdalne dokończenie instalacji przez SSH.
+- **Tiny Core / SystemRescue:** SSH kluczem wymaga kroków ręcznych — patrz kolumna
+  „Jak". Można je zautomatyzować remasterując obraz (poza zakresem szkieletu).
+
 ## Narzędzia / środowiska (menu `tools`)
 
 Pozycje uruchamiają Alpine (x86-64) z nakładką `toolbox.apkovl.tar.gz`, która

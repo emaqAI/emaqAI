@@ -23,6 +23,13 @@ dystrybucję bez nośnika fizycznego.
   serwerów lub serwowanych lokalnie przez HTTP (patrz [docs/DISTROS.md](docs/DISTROS.md)).
 - **proxyDHCP** — działa obok istniejącego routera/DHCP, nie trzeba go zastępować.
 - **BIOS i UEFI** — osobne pliki startowe dla obu trybów.
+- **SSH** — logowanie kluczem do uruchomionych maszyn: Alpine (wszystkie
+  pozycje) przez nakładkę, Debian przez instalator (network-console).
+- **Autostart DOSBox** — pozycja „DOSBox" w menu Narzędzia startuje emulator
+  automatycznie (autologin + launcher z fallbackiem X/framebuffer).
+- **Pełne logowanie po polsku** — każdy krok (wykonany, zapisany,
+  niezrealizowany, crash) trafia do plików `.txt` z auto-sugestiami; po stronie
+  serwera i klienta. Szczegóły: [docs/LOGI.md](docs/LOGI.md).
 
 ## Wymagania
 
@@ -39,13 +46,19 @@ cd sx25
 # 1. Zainstaluj zależności i przygotuj katalogi TFTP/HTTP
 sudo ./scripts/setup.sh
 
-# 2. Pobierz obrazy netboot wybranych dystrybucji
-./scripts/fetch-distros.sh            # wszystkie z data/distros.list
-./scripts/fetch-distros.sh alpine debian   # tylko wybrane
+# 2. Zbuduj nakładki Alpine (SSH, DOSBox, box64)
+./scripts/build-overlay.sh
 
-# 3. Uruchom serwer (dnsmasq proxyDHCP/TFTP + HTTP)
+# 3. Pobierz obrazy netboot wybranych dystrybucji
+./scripts/fetch-distros.sh            # wszystkie z data/distros.list
+./scripts/fetch-distros.sh alpine64 debian64   # tylko wybrane
+
+# 4. Uruchom serwer (dnsmasq proxyDHCP/TFTP + HTTP)
 sudo ./scripts/serve.sh
 ```
+
+Każdy skrypt zapisuje pełny dziennik `.txt` (domyślnie w `/srv/sx25/logs/`);
+ścieżkę pliku wypisuje na końcu działania.
 
 Następnie ustaw w kliencie rozruch z sieci (Network Boot / PXE) i wybierz
 pozycję z menu SX25.
@@ -68,14 +81,20 @@ sx25/
 │       └── tools.ipxe       # DOSBox, box64, narzędzia
 ├── data/
 │   └── distros.list         # manifest: co i skąd pobrać
+├── overlays/                # nakładki Alpine (apkovl): SSH, DOSBox, box64
+│   ├── files/               # zawartość nakładki (etc/, root/, usr/local/...)
+│   └── README.md
 ├── scripts/
+│   ├── common.sh            # wspólne ustawienia + system logowania (PL, .txt)
 │   ├── setup.sh             # instalacja zależności + katalogi
+│   ├── build-overlay.sh     # buduje sx25-base + toolbox (SSH/DOSBox/box64)
 │   ├── fetch-distros.sh     # pobieranie obrazów netboot
 │   ├── build-ipxe.sh        # (opcjonalnie) budowa własnych binariów iPXE
 │   └── serve.sh             # start dnsmasq + HTTP
 └── docs/
     ├── ARCHITECTURE.md      # jak to działa (DHCP→TFTP→iPXE→HTTP)
-    └── DISTROS.md           # katalog dystrybucji + DOSBox/box64
+    ├── DISTROS.md           # katalog dystrybucji + DOSBox/box64 + SSH
+    └── LOGI.md              # system logowania (co, gdzie, format)
 ```
 
 ## Status
