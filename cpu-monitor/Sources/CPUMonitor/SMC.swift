@@ -128,19 +128,23 @@ final class SMC {
         return nil
     }
 
-    /// Best-effort CPU package/die temperature across Intel and Apple Silicon Macs.
+    /// CPU core/die temperature, i.e. the sensor macOS actually throttles
+    /// against. Reports the hottest core sensor found rather than the first
+    /// match: "proximity" keys like TC0P sit near the CPU, not on the die,
+    /// and can read 20-30°C cooler than the cores under load — using them
+    /// would hide real thermal throttling.
     func cpuTemperature() -> Double? {
-        let candidateKeys = [
-            "TC0P", // Intel CPU proximity
-            "TC0D", // Intel CPU die
-            "TC0E", "TC0F",
+        let coreKeys = [
+            "TC0D", "TC0E", "TC0F", "TC0G", "TC0H", // Intel per-core die sensors
+            "TCXC", "TCGC",
             "Tp09", "Tp0T", // Apple Silicon P-cores
             "Te05", "Te0L", // Apple Silicon E-cores
             "Tp01", "Tp05"
         ]
-        for key in candidateKeys {
-            if let t = readTemperature(key) { return t }
-        }
-        return nil
+        let readings = coreKeys.compactMap { readTemperature($0) }
+        if let hottest = readings.max() { return hottest }
+
+        // Fall back to the proximity sensor if no die sensor responded.
+        return readTemperature("TC0P")
     }
 }

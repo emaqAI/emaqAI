@@ -37,10 +37,6 @@ final class AppState: ObservableObject {
         coreUsages = usages
         overallUsage = usages.isEmpty ? 0 : usages.reduce(0, +) / Double(usages.count)
         temperature = SMC.shared.cpuTemperature()
-        if ProcessInfo.processInfo.environment["CPUMONITOR_DEBUG"] != nil {
-            print("DEBUG temp=\(String(describing: temperature)) overall=\(overallUsage)")
-            fflush(stdout)
-        }
         topProcesses = processMonitor.sampleTopProcesses()
 
         if coreHistory.count != usages.count {
