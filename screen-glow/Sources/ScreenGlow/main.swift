@@ -12,7 +12,7 @@ final class GlowWindow: NSWindow {
 
 final class GlowView: NSView {
     private let borderLayer = CAShapeLayer()
-    private let lineWidth: CGFloat = 10
+    private let lineWidth: CGFloat = 4
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -28,7 +28,7 @@ final class GlowView: NSView {
         borderLayer.lineWidth = lineWidth
         borderLayer.shadowColor = NSColor.systemGreen.cgColor
         borderLayer.shadowOpacity = 1.0
-        borderLayer.shadowRadius = 20
+        borderLayer.shadowRadius = 10
         borderLayer.shadowOffset = .zero
         layer?.addSublayer(borderLayer)
         updatePath()

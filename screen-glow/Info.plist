@@ -9,7 +9,9 @@
     <key>CFBundleIdentifier</key>
     <string>com.emaqai.screenglow</string>
     <key>CFBundleName</key>
-    <string>Screen Glow</string>
+    <string>Screen Glow AI</string>
+    <key>CFBundleDisplayName</key>
+    <string>Screen Glow AI</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

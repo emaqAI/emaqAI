@@ -9,7 +9,9 @@
     <key>CFBundleIdentifier</key>
     <string>com.emaqai.cpumonitor</string>
     <key>CFBundleName</key>
-    <string>CPU Monitor</string>
+    <string>CPU Monitor AI</string>
+    <key>CFBundleDisplayName</key>
+    <string>CPU Monitor AI</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
