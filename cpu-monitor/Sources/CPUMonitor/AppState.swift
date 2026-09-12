@@ -13,6 +13,8 @@ final class AppState: ObservableObject {
     private let processMonitor = ProcessMonitor()
     private var timer: Timer?
     private let historyLength = 30
+    private var tickCount = 0
+    private var isSamplingProcesses = false
 
     func start() {
         // Prime the delta-based core sampler so the first displayed sample isn't empty.
@@ -37,7 +39,22 @@ final class AppState: ObservableObject {
         coreUsages = usages
         overallUsage = usages.isEmpty ? 0 : usages.reduce(0, +) / Double(usages.count)
         temperature = SMC.shared.cpuTemperature()
-        topProcesses = processMonitor.sampleTopProcesses()
+
+        // `top -l 2` takes ~1s and would block the main actor if awaited here,
+        // so it's kicked off on a background task at a slower cadence than the
+        // 1s core/temperature tick instead of running (and blocking) every tick.
+        tickCount += 1
+        if !isSamplingProcesses && tickCount % 5 == 0 {
+            isSamplingProcesses = true
+            let monitor = processMonitor
+            Task.detached(priority: .utility) { [weak self] in
+                let result = monitor.sampleTopProcesses()
+                await MainActor.run {
+                    self?.topProcesses = result
+                    self?.isSamplingProcesses = false
+                }
+            }
+        }
 
         if coreHistory.count != usages.count {
             coreHistory = usages.map { [$0] }
