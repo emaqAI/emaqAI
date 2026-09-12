@@ -147,4 +147,25 @@ final class SMC {
         // Fall back to the proximity sensor if no die sensor responded.
         return readTemperature("TC0P")
     }
+
+    /// Reads a fan RPM value ("fpe2" fixed point: value = raw / 4).
+    func readFanRPM(_ key: String) -> Double? {
+        guard let keyInfo = readKeyInfo(key), keyInfo.dataSize > 0 else { return nil }
+
+        var input = SMCParamStruct()
+        input.key = fourCharCode(key)
+        input.keyInfo = keyInfo
+        input.data8 = Selector.kSMCReadKey.rawValue
+
+        guard let output = callSMC(&input), output.result == 0 else { return nil }
+
+        let raw = (UInt16(output.bytes.0) << 8) | UInt16(output.bytes.1)
+        return Double(raw) / 4.0
+    }
+
+    /// Actual RPM of the fastest fan (F0Ac, F1Ac, ...). Returns nil on fanless Macs.
+    func fanRPM() -> Double? {
+        let readings = ["F0Ac", "F1Ac", "F2Ac"].compactMap { readFanRPM($0) }
+        return readings.max()
+    }
 }

@@ -61,6 +61,19 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            VStack(alignment: .leading) {
+                Text("Wentylator")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let fanRPM = state.fanRPM {
+                    Text("\(Int(fanRPM)) RPM")
+                        .font(.system(size: 32, weight: .semibold, design: .rounded))
+                } else {
+                    Text("brak danych")
+                        .font(.system(size: 20, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+            }
             Spacer()
             VStack(alignment: .trailing) {
                 Text("Rdzenie logiczne")
