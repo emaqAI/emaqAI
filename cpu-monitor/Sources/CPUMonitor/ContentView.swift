@@ -21,6 +21,12 @@ struct ContentView: View {
                         .padding(.top, 8)
                 }
 
+                GroupBox("Historia temperatury") {
+                    temperatureChart
+                        .frame(height: 180)
+                        .padding(.top, 8)
+                }
+
                 GroupBox("Najbardziej obciążające procesy") {
                     processTable
                 }
@@ -102,6 +108,24 @@ struct ContentView: View {
         }
         .chartYScale(domain: 0...100)
         .chartLegend(.hidden)
+    }
+
+    private var temperatureChart: some View {
+        Chart {
+            RuleMark(y: .value("Próg throttlingu", 85))
+                .foregroundStyle(.secondary.opacity(0.5))
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+
+            ForEach(Array(state.temperatureHistory.enumerated()), id: \.offset) { index, value in
+                LineMark(
+                    x: .value("Próbka", index),
+                    y: .value("Temperatura", value)
+                )
+                .foregroundStyle(colorForTemperature(value))
+                .interpolationMethod(.catmullRom)
+            }
+        }
+        .chartYScale(domain: 40...105)
     }
 
     private var processTable: some View {

@@ -8,6 +8,7 @@ final class AppState: ObservableObject {
     @Published var temperature: Double?
     @Published var topProcesses: [ProcessUsage] = []
     @Published var coreHistory: [[Double]] = [] // rolling history per core, for sparkline-style chart
+    @Published var temperatureHistory: [Double] = []
 
     private let coreMonitor = CoreUsageMonitor()
     private let processMonitor = ProcessMonitor()
@@ -39,6 +40,12 @@ final class AppState: ObservableObject {
         coreUsages = usages
         overallUsage = usages.isEmpty ? 0 : usages.reduce(0, +) / Double(usages.count)
         temperature = SMC.shared.cpuTemperature()
+        if let temperature {
+            temperatureHistory.append(temperature)
+            if temperatureHistory.count > historyLength {
+                temperatureHistory.removeFirst()
+            }
+        }
 
         // `top -l 2` takes ~1s and would block the main actor if awaited here,
         // so it's kicked off on a background task at a slower cadence than the
