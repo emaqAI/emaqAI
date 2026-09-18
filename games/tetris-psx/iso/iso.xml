@@ -15,8 +15,8 @@
 		     here if you have a legally obtained PSX license file. -->
 
 		<directory_tree>
-			<file name="SYSTEM.CNF" type="data" source="system.cnf" />
-			<file name="TETRIS.EXE" type="data" source="../build/tetris.exe" />
+			<file name="SYSTEM.CNF" type="data" source="../iso/system.cnf" />
+			<file name="TETRIS.EXE" type="data" source="tetris.exe" />
 		</directory_tree>
 	</track>
 </iso_project>

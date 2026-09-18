@@ -86,8 +86,26 @@ duckstation-nogui build/tetris.cue
 
 ## Status projektu
 
-Kod gry jest kompletny i gotowy do budowy przy użyciu PSn00bSDK. Ponieważ
-środowisko, w którym powstał ten kod, nie ma zainstalowanego cross-toolchainu
-MIPS ani `mkpsxiso`, finalny plik `.iso`/`.bin+.cue` nie został tu wygenerowany
-binarnie — należy uruchomić `toolchain/setup.sh` i `build.sh` lokalnie lub w
-pipeline CI z dostępem do sieci, aby otrzymać gotowy obraz płyty.
+Gra została w pełni zbudowana i przetestowana end-to-end: cross-toolchain
+`mipsel-none-elf-gcc` (GCC 11.2.0 + binutils 2.37), PSn00bSDK (`libpsn00b`)
+oraz `mkpsxiso` zostały skompilowane ze źródeł, po czym `tetris.exe` skompilował
+się bez błędów i `mkpsxiso` wygenerował poprawny obraz płyty
+(`build/tetris.bin` + `build/tetris.cue`, 75 264 bajty / 32 sektory).
+`tetris.exe` ma prawidłowy nagłówek `PS-X EXE`.
+
+Podczas budowy dwie rzeczy wymagały korekty względem pierwszej wersji kodu,
+ponieważ ta wersja PSn00bSDK nie implementuje wysokopoziomowego API:
+
+- **`audio.c`** — `SpuVoiceAttr`/`SpuSetVoiceAttr` są w tym SDK wyłączone
+  (`#if 0` w `psxspu.h`); efekty dźwiękowe używają niskopoziomowych makr
+  rejestrowych (`SpuSetVoiceVolume`, `SpuSetVoicePitch`, `SpuSetVoiceADSR`,
+  `SpuSetKey`).
+- **`save.c`** — SDK udostępnia tylko sektorowe funkcje BIOS
+  (`InitCARD`/`_card_read`/`_card_write`), bez systemu plików karty pamięci.
+  Wynik zapisywany jest bezpośrednio w sektorze danych bloku 1 (slot 1), co
+  działa poprawnie w samej grze, ale nie pojawi się jako nazwany plik w
+  menedżerze kart pamięci BIOS-u.
+
+Obraz płyty nie jest testowany na sprzęcie ani w emulatorze w tym środowisku
+(brak GUI/emulatora) — przed graniem warto zweryfikować go w DuckStation lub
+na konsoli z modchipem/swap trickiem.

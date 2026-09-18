@@ -7,10 +7,6 @@ project(
 	LANGUAGES C ASM
 )
 
-# PSn00bSDK provides this helper macro to set up the PS1 executable
-# (SLUS-style .exe with proper linker script, TC/MC headers, etc.)
-include(FindPSn00bSDK)
-
 psn00bsdk_add_executable(tetris GPREL
 	src/main.c
 	src/game.c
