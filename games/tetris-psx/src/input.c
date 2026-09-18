@@ -1,6 +1,6 @@
 #include "input.h"
 #include <psxpad.h>
-#include <psxetc.h>
+#include <psxapi.h>
 #include <string.h>
 
 static uint8_t pad_buf[2][34];

@@ -13,9 +13,13 @@ static DISPENV disp_env[2];
 static DRAWENV draw_env[2];
 static int active_buf = 0;
 
-static uint8_t ot_ordering_table[2][1];
+static uint32_t ot_ordering_table[2][1];
 static uint8_t primitive_buffer[2][16384];
 static uint8_t *next_primitive;
+
+static int font_hud;    /* score / level / lines, bottom margin */
+static int font_title;  /* state banner: menu title, PAUSED, GAME OVER */
+static int font_menu;   /* menu item list */
 
 static const CVECTOR PIECE_COLORS[PIECE_COUNT] = {
 	{0,   240, 240, 0}, /* I - cyan */
@@ -45,6 +49,13 @@ void render_init(void)
 	PutDrawEnv(&draw_env[active_buf]);
 
 	SetDispMask(1);
+
+	/* Debug font (built into PSn00bSDK) loaded once into an unused corner
+	 * of VRAM; text streams are opened once here rather than per frame. */
+	FntLoad(960, 0);
+	font_hud   = FntOpen(4, 182, 312, 40, 0, 128);
+	font_title = FntOpen(56, 40, 208, 96, 1, 96);
+	font_menu  = FntOpen(78, 76, 160, 72, 0, 96);
 }
 
 void render_frame_begin(void)
@@ -61,6 +72,13 @@ void render_frame_end(void)
 	PutDispEnv(&disp_env[active_buf]);
 	PutDrawEnv(&draw_env[active_buf]);
 	DrawOTag(ot_ordering_table[active_buf]);
+
+	/* FntFlush submits and draws its own primitives immediately (it does
+	 * its own DrawSync/DrawOTag/DrawSync), so it must run after our own
+	 * DrawOTag but before the display buffer flip below. */
+	FntFlush(font_hud);
+	FntFlush(font_title);
+	FntFlush(font_menu);
 
 	active_buf ^= 1;
 }
@@ -100,10 +118,16 @@ static void draw_board_frame(void)
 
 void render_menu(int selected_item, uint32_t high_score)
 {
+	static const char *ITEMS[] = { "START", "HIGH SCORE", "CONTROLS" };
+
 	draw_filled_rect(60, 60, 200, 100, 30, 30, 60);
-	draw_filled_rect(70, 70 + selected_item * 20, 8, 8,
-			  240, 240, 0);
-	(void)high_score;
+	draw_filled_rect(70, 76 + selected_item * 16, 6, 6, 240, 240, 0);
+
+	FntPrint(font_title, "TETRIS PSX");
+	FntPrint(font_menu, "\n");
+	for (int i = 0; i < 3; i++)
+		FntPrint(font_menu, "  %s\n", ITEMS[i]);
+	FntPrint(font_hud, "HIGH SCORE: %u", high_score);
 }
 
 void render_game(const Game *g)
@@ -162,17 +186,22 @@ void render_game(const Game *g)
 				CELL_SIZE - 2, CELL_SIZE - 2, c->r, c->g, c->b);
 		}
 	}
+
+	FntPrint(font_hud, "SCORE %06u  LEVEL %02u  LINES %03u",
+		 g->score, g->level, g->lines_cleared);
 }
 
 void render_pause(void)
 {
-	draw_filled_rect(110, 100, 100, 40, 0, 0, 0);
+	draw_filled_rect(56, 40, 208, 96, 0, 0, 0);
+	FntPrint(font_title, "PAUSED\n\nSTART: RESUME\nSELECT: QUIT TO MENU");
 }
 
 void render_game_over(const Game *g, uint32_t high_score, int is_new_high_score)
 {
-	(void)g;
-	draw_filled_rect(70, 90, 180, 60, 40, 0, 0);
-	(void)high_score;
-	(void)is_new_high_score;
+	draw_filled_rect(56, 40, 208, 96, 40, 0, 0);
+	FntPrint(font_title, "GAME OVER\n\nSCORE: %u\n%s\n\nPRESS X/START",
+		 g->score,
+		 is_new_high_score ? "NEW HIGH SCORE!" : "");
+	FntPrint(font_hud, "HIGH SCORE: %u", high_score);
 }
