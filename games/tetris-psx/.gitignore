@@ -1,0 +1,4 @@
+build/
+*.bin
+*.cue
+*.iso

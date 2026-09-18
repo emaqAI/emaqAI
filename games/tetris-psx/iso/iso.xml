@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<iso_project image_name="tetris.bin" cue_sheet="tetris.cue">
+	<track type="data">
+		<identifiers
+			system="PLAYSTATION"
+			application="TETRIS PSX"
+			volume="TETRISPSX"
+			volume_set="TETRISPSX"
+			publisher="EMAQAI"
+			data_preparer="PSN00BSDK"
+		/>
+
+		<!-- No license data track: homebrew images boot fine without it on
+		     emulators and modded/softmodded hardware. Add <license file="..."/>
+		     here if you have a legally obtained PSX license file. -->
+
+		<directory_tree>
+			<file name="SYSTEM.CNF" type="data" source="system.cnf" />
+			<file name="TETRIS.EXE" type="data" source="../build/tetris.exe" />
+		</directory_tree>
+	</track>
+</iso_project>
