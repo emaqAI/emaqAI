@@ -54,7 +54,11 @@ void render_init(void)
 	 * of VRAM; text streams are opened once here rather than per frame. */
 	FntLoad(960, 0);
 	font_hud   = FntOpen(4, 182, 312, 40, 0, 128);
-	font_title = FntOpen(56, 40, 208, 96, 1, 96);
+	/* isbg=0: FntFlush() draws a background tile every frame regardless of
+	 * whether any text was printed to the stream that frame, which would
+	 * paint over the board during normal gameplay. The menu/pause/game-over
+	 * screens already draw their own background rect before printing text. */
+	font_title = FntOpen(56, 40, 208, 96, 0, 96);
 	font_menu  = FntOpen(78, 76, 160, 72, 0, 96);
 }
 
