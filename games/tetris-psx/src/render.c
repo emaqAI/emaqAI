@@ -105,7 +105,11 @@ static void draw_block(int col, int row, int color_index)
 	const CVECTOR *c = &PIECE_COLORS[color_index];
 	int x = BOARD_ORIGIN_X + col * CELL_SIZE;
 	int y = BOARD_ORIGIN_Y + row * CELL_SIZE;
-	draw_filled_rect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, c->r, c->g, c->b);
+	/* Fill the whole cell (no inset): adjacent cells of the same piece, or
+	 * of the locked stack, must touch with no gap between them, otherwise
+	 * every multi-cell piece looks like separate floating squares instead
+	 * of one solid connected tetromino. */
+	draw_filled_rect(x, y, CELL_SIZE, CELL_SIZE, c->r, c->g, c->b);
 }
 
 static void draw_board_frame(void)
@@ -156,9 +160,9 @@ void render_game(const Game *g)
 		if (flashing) {
 			if (flash_phase_visible) {
 				for (int x = 0; x < BOARD_WIDTH; x++)
-					draw_filled_rect(BOARD_ORIGIN_X + x * CELL_SIZE + 1,
-							  BOARD_ORIGIN_Y + y * CELL_SIZE + 1,
-							  CELL_SIZE - 2, CELL_SIZE - 2, 255, 255, 255);
+					draw_filled_rect(BOARD_ORIGIN_X + x * CELL_SIZE,
+							  BOARD_ORIGIN_Y + y * CELL_SIZE,
+							  CELL_SIZE, CELL_SIZE, 255, 255, 255);
 			}
 			continue;
 		}
@@ -192,9 +196,9 @@ void render_game(const Game *g)
 			int row = cells[i].y;
 			const CVECTOR *c = &PIECE_COLORS[tetromino_color_index(g->next.type)];
 			draw_filled_rect(
-				BOARD_ORIGIN_X + BOARD_WIDTH * CELL_SIZE + 16 + col * CELL_SIZE + 1,
-				BOARD_ORIGIN_Y + row * CELL_SIZE + 1,
-				CELL_SIZE - 2, CELL_SIZE - 2, c->r, c->g, c->b);
+				BOARD_ORIGIN_X + BOARD_WIDTH * CELL_SIZE + 16 + col * CELL_SIZE,
+				BOARD_ORIGIN_Y + row * CELL_SIZE,
+				CELL_SIZE, CELL_SIZE, c->r, c->g, c->b);
 		}
 	}
 
@@ -209,9 +213,9 @@ void render_game(const Game *g)
 			int row = cells[i].y;
 			const CVECTOR *c = &PIECE_COLORS[tetromino_color_index(g->hold)];
 			draw_filled_rect(
-				BOARD_ORIGIN_X - 16 - 4 * CELL_SIZE + col * CELL_SIZE + 1,
-				BOARD_ORIGIN_Y + row * CELL_SIZE + 1,
-				CELL_SIZE - 2, CELL_SIZE - 2, c->r, c->g, c->b);
+				BOARD_ORIGIN_X - 16 - 4 * CELL_SIZE + col * CELL_SIZE,
+				BOARD_ORIGIN_Y + row * CELL_SIZE,
+				CELL_SIZE, CELL_SIZE, c->r, c->g, c->b);
 		}
 	}
 
