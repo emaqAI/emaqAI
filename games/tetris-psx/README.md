@@ -106,6 +106,20 @@ ponieważ ta wersja PSn00bSDK nie implementuje wysokopoziomowego API:
   działa poprawnie w samej grze, ale nie pojawi się jako nazwany plik w
   menedżerze kart pamięci BIOS-u.
 
-Obraz płyty nie jest testowany na sprzęcie ani w emulatorze w tym środowisku
-(brak GUI/emulatora) — przed graniem warto zweryfikować go w DuckStation lub
-na konsoli z modchipem/swap trickiem.
+### Test w emulatorze (mednafen + OpenBIOS)
+
+W tym środowisku zainstalowano `mednafen` i zbudowano ze źródeł
+[OpenBIOS](https://github.com/grumpycoders/pcsx-redux/tree/main/src/mips/openbios)
+(legalny, open-source'owy zamiennik BIOS-u PS1 — nie zrzut firmware'u Sony).
+BIOS poprawnie startuje i zaczyna czytać płytę, ale w tej kombinacji
+mednafen + OpenBIOS (build z `BOOT_MODE=fast`) proces zawiesza się z powodu
+nieukończonej ścieżki obsługi błędu odczytu CD w OpenBIOS (wywołanie
+niezaimplementowanej funkcji BIOS-u `A0:A1` wewnątrz `cdromBlockReading()`).
+Zweryfikowano, że **problem nie leży w kodzie gry** — dokładnie ten sam crash
+występuje z gotowym przykładem `hello` z samego PSn00bSDK.
+
+Obraz płyty jest strukturalnie poprawny (mednafen poprawnie parsuje TOC:
+CD-XA, jedna ścieżka danych). Zalecane dalsze testy:
+- **DuckStation** (znacznie dojrzalszy rdzeń CD-ROM niż mednafen) z prawdziwym
+  BIOS-em PS1 lub tym samym OpenBIOS-em,
+- prawdziwa konsola PS1 z modchipem/swap trickiem.
