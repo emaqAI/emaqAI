@@ -154,7 +154,14 @@ static void try_spawn_next(Game *g)
 	PieceType next = g->next.type;
 	g->next.type = random_piece(g);
 
-	if (!piece_fits(g, next, 0, 3, -2)) {
+	/* Every piece's rotation-0 shape only occupies relative rows 0-1, so
+	 * checking fit at the actual (off-board, negative-y) spawn position
+	 * used for the smooth entry animation would always trivially succeed
+	 * (those rows never touch the visible board, so there's never
+	 * anything to collide with). Check at y=0 instead: the row the piece
+	 * will actually descend into first. This is what determines whether
+	 * there's genuinely room to place it, independent of the animation. */
+	if (!piece_fits(g, next, 0, 3, 0)) {
 		g->state = STATE_GAME_OVER;
 		audio_play_sfx(SFX_GAME_OVER);
 		return;
@@ -246,7 +253,7 @@ static void hold_piece(Game *g)
 	} else {
 		PieceType swapped = g->hold;
 		g->hold = current_type;
-		if (!piece_fits(g, swapped, 0, 3, -2))
+		if (!piece_fits(g, swapped, 0, 3, 0))
 			return;
 		spawn_piece(g, swapped);
 	}
