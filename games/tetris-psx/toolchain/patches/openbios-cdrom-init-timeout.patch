@@ -1,0 +1,22 @@
+diff --git a/src/mips/openbios/cdrom/statemachine.c b/src/mips/openbios/cdrom/statemachine.c
+index c6ee3bd..f3bbff6 100644
+--- a/src/mips/openbios/cdrom/statemachine.c
++++ b/src/mips/openbios/cdrom/statemachine.c
+@@ -763,7 +763,16 @@ int __attribute__((section(".ramtext"))) cdromInnerInit() {
+     leaveCriticalSection();
+     CDROM_REG0 = 0;
+     CDROM_REG1 = CDL_INIT;
+-    int wait = 30000;
++    // Some emulators (e.g. pcsx-redux, mednafen) simulate the real,
++    // multi-second mechanical lid-close/disc-spin-up sequence before the
++    // CDL_INIT response IRQ fires (on real hardware this can take over 6
++    // seconds). The original 30000-iteration spin was tuned for real
++    // hardware/simple emulators and is far too short here: it gives up and
++    // re-issues CDL_INIT (resetting the emulator's mechanical state machine)
++    // before the first attempt ever gets a chance to complete, causing an
++    // infinite retry livelock. Waiting much longer lets a single attempt
++    // actually succeed.
++    int wait = 30000000;
+     while (wait-- && s_initializationComplete != 2) {
+         if (s_initializationComplete == 1) return 1;
+         atomic_signal_fence(memory_order_consume);

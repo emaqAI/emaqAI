@@ -106,20 +106,29 @@ ponieważ ta wersja PSn00bSDK nie implementuje wysokopoziomowego API:
   działa poprawnie w samej grze, ale nie pojawi się jako nazwany plik w
   menedżerze kart pamięci BIOS-u.
 
-### Test w emulatorze (mednafen + OpenBIOS)
+### Test w emulatorze — zweryfikowane, gra bootuje i działa
 
-W tym środowisku zainstalowano `mednafen` i zbudowano ze źródeł
-[OpenBIOS](https://github.com/grumpycoders/pcsx-redux/tree/main/src/mips/openbios)
-(legalny, open-source'owy zamiennik BIOS-u PS1 — nie zrzut firmware'u Sony).
-BIOS poprawnie startuje i zaczyna czytać płytę, ale w tej kombinacji
-mednafen + OpenBIOS (build z `BOOT_MODE=fast`) proces zawiesza się z powodu
-nieukończonej ścieżki obsługi błędu odczytu CD w OpenBIOS (wywołanie
-niezaimplementowanej funkcji BIOS-u `A0:A1` wewnątrz `cdromBlockReading()`).
-Zweryfikowano, że **problem nie leży w kodzie gry** — dokładnie ten sam crash
-występuje z gotowym przykładem `hello` z samego PSn00bSDK.
+Gra została uruchomiona end-to-end w emulatorze (pcsx-redux, CLI/headless)
+z [OpenBIOS](https://github.com/grumpycoders/pcsx-redux/tree/main/src/mips/openbios)
+(legalny, open-source'owy zamiennik BIOS-u PS1 — nie zrzut firmware'u Sony)
+i potwierdzona zrzutem ekranu z ekranu tytułowego (TETRIS PSX / START /
+HIGH SCORE / CONTROLS).
 
-Obraz płyty jest strukturalnie poprawny (mednafen poprawnie parsuje TOC:
-CD-XA, jedna ścieżka danych). Zalecane dalsze testy:
-- **DuckStation** (znacznie dojrzalszy rdzeń CD-ROM niż mednafen) z prawdziwym
-  BIOS-em PS1 lub tym samym OpenBIOS-em,
-- prawdziwa konsola PS1 z modchipem/swap trickiem.
+Po drodze napotkano i naprawiono prawdziwy bug w OpenBIOS: funkcja
+`cdromInnerInit()` (`src/mips/openbios/cdrom/statemachine.c`) czekała na
+odpowiedź napędu CD tylko 30 000 iteracji pętli, po czym poddawała się i
+wysyłała komendę `CDL_INIT` ponownie. Emulatory realistycznie symulujące
+mechanikę napędu (otwarcie/zamknięcie szuflady, rozkręcenie płyty — na
+prawdziwym sprzęcie to ponad 6 sekund) nigdy nie zdążały odpowiedzieć w tym
+czasie, więc OpenBIOS w kółko resetował stan napędu, zanim ten zdążył
+dokończyć inicjalizację — nieskończony livelock. Poprawka zwiększa limit
+oczekiwania do 30 000 000 iteracji, co pozwala jednej próbie faktycznie się
+zakończyć. Ten sam bug reprodukował się identycznie zarówno w `mednafen`,
+jak i w `pcsx-redux` (i dotyczy każdej gry na PSn00bSDK/OpenBIOS, nie tylko
+tego Tetrisa).
+
+Do przetestowania na własnym sprzęcie/emulatorze (np. DuckStation) polecany
+jest ten sam poprawiony OpenBIOS, ewentualnie prawdziwy BIOS PS1, jeśli go
+posiadasz. Patch dla OpenBIOS (do zastosowania na
+`grumpycoders/pcsx-redux`, plik `src/mips/openbios/cdrom/statemachine.c`)
+jest w `toolchain/patches/openbios-cdrom-init-timeout.patch`.
