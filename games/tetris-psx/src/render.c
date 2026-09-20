@@ -138,7 +138,31 @@ void render_game(const Game *g)
 {
 	draw_board_frame();
 
+	/* While a completed line is blinking, alternate every ~4 frames
+	 * between a bright white flash and hiding the row entirely. */
+	int flash_phase_visible = ((g->flash_timer / 4) & 1) == 0;
+
 	for (int y = 0; y < BOARD_HEIGHT; y++) {
+		int flashing = 0;
+		if (g->flash_timer > 0) {
+			for (int i = 0; i < g->lines_to_flash_count; i++) {
+				if (g->lines_to_flash[i] == y) {
+					flashing = 1;
+					break;
+				}
+			}
+		}
+
+		if (flashing) {
+			if (flash_phase_visible) {
+				for (int x = 0; x < BOARD_WIDTH; x++)
+					draw_filled_rect(BOARD_ORIGIN_X + x * CELL_SIZE + 1,
+							  BOARD_ORIGIN_Y + y * CELL_SIZE + 1,
+							  CELL_SIZE - 2, CELL_SIZE - 2, 255, 255, 255);
+			}
+			continue;
+		}
+
 		for (int x = 0; x < BOARD_WIDTH; x++) {
 			uint8_t cell = g->cells[y][x];
 			if (cell)
@@ -146,7 +170,7 @@ void render_game(const Game *g)
 		}
 	}
 
-	if (g->state == STATE_PLAYING) {
+	if (g->state == STATE_PLAYING && g->flash_timer == 0) {
 		Cell cells[PIECE_CELLS];
 		tetromino_get_cells(g->current.type, g->current.rotation, cells);
 		for (int i = 0; i < PIECE_CELLS; i++) {

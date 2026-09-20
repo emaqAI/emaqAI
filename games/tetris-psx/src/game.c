@@ -4,6 +4,7 @@
 #include <string.h>
 
 #define LOCK_DELAY_FRAMES 30 /* half a second at 60fps */
+#define FLASH_DURATION_FRAMES 24 /* three white/blank blink cycles */
 
 static uint32_t rng_next(Game *g)
 {
@@ -161,6 +162,29 @@ static void try_spawn_next(Game *g)
 	spawn_piece(g, next);
 }
 
+/* Locks the current piece, and if it completed any lines, starts the
+ * blink-flash animation instead of clearing them immediately (clear_lines()
+ * and the next spawn happen once the flash finishes, in game_update()).
+ * Returns 1 if this ended the game (only possible when no lines were
+ * completed, since spawning is deferred while flashing). */
+static int finish_lock(Game *g)
+{
+	lock_piece(g);
+
+	int rows[4];
+	int count = find_full_lines(g, rows);
+	if (count > 0) {
+		memcpy(g->lines_to_flash, rows, sizeof(int) * count);
+		g->lines_to_flash_count = count;
+		g->flash_timer = FLASH_DURATION_FRAMES;
+		apply_score_for_lines(g, count);
+		return 0;
+	}
+
+	try_spawn_next(g);
+	return g->state == STATE_GAME_OVER;
+}
+
 static void try_move(Game *g, int dx, int dy)
 {
 	if (piece_fits(g, g->current.type, g->current.rotation,
@@ -197,7 +221,7 @@ static void try_rotate(Game *g, int dir)
 	}
 }
 
-static void hard_drop(Game *g)
+static int hard_drop(Game *g)
 {
 	int dropped = 0;
 	while (piece_fits(g, g->current.type, g->current.rotation,
@@ -206,15 +230,7 @@ static void hard_drop(Game *g)
 		dropped++;
 	}
 	g->score += (uint32_t)dropped * 2;
-	lock_piece(g);
-
-	int rows[4];
-	int count = find_full_lines(g, rows);
-	if (count > 0) {
-		clear_lines(g, rows, count);
-		apply_score_for_lines(g, count);
-	}
-	try_spawn_next(g);
+	return finish_lock(g);
 }
 
 static void hold_piece(Game *g)
@@ -242,6 +258,17 @@ int game_update(Game *g, uint32_t pressed, uint32_t held_in)
 	if (g->state == STATE_GAME_OVER)
 		return 0;
 
+	if (g->flash_timer > 0) {
+		g->flash_timer--;
+		if (g->flash_timer == 0) {
+			clear_lines(g, g->lines_to_flash, g->lines_to_flash_count);
+			g->lines_to_flash_count = 0;
+			try_spawn_next(g);
+			return g->state == STATE_GAME_OVER;
+		}
+		return 0;
+	}
+
 	if (pressed & IN_LEFT)
 		try_move(g, -1, 0);
 	if (pressed & IN_RIGHT)
@@ -252,10 +279,8 @@ int game_update(Game *g, uint32_t pressed, uint32_t held_in)
 		try_rotate(g, -1);
 	if (pressed & IN_TRIANGLE)
 		hold_piece(g);
-	if (pressed & IN_UP) {
-		hard_drop(g);
-		return g->state == STATE_GAME_OVER;
-	}
+	if (pressed & IN_UP)
+		return hard_drop(g);
 
 	uint32_t interval = g->gravity_interval;
 	if (held_in & IN_DOWN)
@@ -279,18 +304,8 @@ int game_update(Game *g, uint32_t pressed, uint32_t held_in)
 
 	if (g->lock_delay_active) {
 		g->lock_timer++;
-		if (g->lock_timer >= LOCK_DELAY_FRAMES) {
-			lock_piece(g);
-
-			int rows[4];
-			int count = find_full_lines(g, rows);
-			if (count > 0) {
-				clear_lines(g, rows, count);
-				apply_score_for_lines(g, count);
-			}
-			try_spawn_next(g);
-			return g->state == STATE_GAME_OVER;
-		}
+		if (g->lock_timer >= LOCK_DELAY_FRAMES)
+			return finish_lock(g);
 	}
 
 	return 0;
