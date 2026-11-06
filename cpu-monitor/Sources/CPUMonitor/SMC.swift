@@ -154,19 +154,17 @@ final class SMC {
         return readTemperature("TC0P")
     }
 
-    /// Hottest GPU die sensor. On dual-GPU Intel MacBook Pros the discrete GPU
-    /// (TG0D) reads a flat 35°C while powered down, so the integrated GPU on
-    /// the CPU package (TCGC) is usually the one that matters. TG1D is skipped:
-    /// on this hardware it returns a constant out-of-range value.
-    func gpuTemperature() -> Double? {
-        let gpuKeys = [
-            "TG0D", "TCGC",                 // Intel Macs: discrete GPU die, integrated GPU
-            "Tg05", "Tg0D", "Tg0L", "Tg0T"  // Apple Silicon GPU clusters
-        ]
-        let readings = gpuKeys.compactMap { readTemperature($0) }
-        if let hottest = readings.max() { return hottest }
-        return readTemperature("TG0P")
+    /// Integrated GPU: the graphics block on the Intel CPU package (TCGC),
+    /// or the hottest GPU cluster on Apple Silicon.
+    func integratedGPUTemperature() -> Double? {
+        let keys = ["TCGC", "Tg05", "Tg0D", "Tg0L", "Tg0T"]
+        return keys.compactMap { readTemperature($0) }.max()
     }
+
+    /// Discrete GPU die (TG0D). Reads a flat 35°C while the GPU is powered
+    /// down. TG1D is not used: on this hardware it returns a constant
+    /// out-of-range value.
+    func discreteGPUTemperature() -> Double? { readTemperature("TG0D") }
 
     /// Reads a fan RPM value ("fpe2" fixed point: value = raw / 4).
     func readFanRPM(_ key: String) -> Double? {
@@ -175,10 +173,11 @@ final class SMC {
         return Double(raw) / 4.0
     }
 
-    /// Actual RPM of the fastest fan (F0Ac, F1Ac, ...). Returns nil on fanless Macs.
-    func fanRPM() -> Double? {
-        let readings = ["F0Ac", "F1Ac", "F2Ac"].compactMap { readFanRPM($0) }
-        return readings.max()
+    /// Actual RPM of every fan (F0Ac, F1Ac, ...), as many as FNum reports.
+    /// Empty on fanless Macs.
+    func fanRPMs() -> [Double] {
+        let count = readKey("FNum").map { Int($0.output.bytes.0) } ?? 0
+        return (0..<count).compactMap { readFanRPM("F\($0)Ac") }
     }
 
     /// Reads a power value in watts. Power keys come as either big-endian
@@ -197,8 +196,13 @@ final class SMC {
         }
     }
 
-    /// Whole CPU package: cores, integrated GPU and uncore.
-    func cpuPackagePower() -> Double? { readPower("PCPT") }
+    /// CPU cores only, so it can be shown next to the integrated GPU
+    /// without double counting (the package total, PCPT, includes both).
+    func cpuCorePower() -> Double? { readPower("PCPC") }
+
+    func integratedGPUPower() -> Double? { readPower("PCPG") }
+
+    func discreteGPUPower() -> Double? { readPower("PG0R") }
 
     /// Whole machine. On AC this tracks the adapter input (PDTR) one sample later.
     func systemPower() -> Double? { readPower("PSTR") }

@@ -40,33 +40,18 @@ struct ContentView: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 18) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top, spacing: 18) {
-                    stat("Zużycie CPU") {
-                        Text("\(state.overallUsage, specifier: "%.1f")%")
-                    }
-                    stat("Temp. CPU") {
-                        temperatureText(state.temperature)
-                    }
-                    stat("Temp. GPU") {
-                        temperatureText(state.gpuTemperature)
-                    }
-                    stat("Wentylator") {
-                        if let fanRPM = state.fanRPM {
-                            Text("\(Int(fanRPM)) RPM")
-                        } else {
-                            noData
+                    ForEach(Array(state.fanRPMs.enumerated()), id: \.offset) { index, rpm in
+                        stat("Wentylator \(index + 1)") {
+                            Text("\(Int(rpm)) RPM")
                         }
-                    }
-                }
-                HStack(alignment: .top, spacing: 18) {
-                    stat("Moc CPU") {
-                        wattsText(state.cpuPower)
                     }
                     stat("Moc całkowita") {
                         wattsText(state.systemPower)
                     }
                 }
+                componentTable
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 6) {
@@ -81,6 +66,70 @@ struct ContentView: View {
                 .pickerStyle(.menu)
                 .fixedSize()
             }
+        }
+    }
+
+    private var componentTable: some View {
+        Grid(alignment: .leading, horizontalSpacing: 22, verticalSpacing: 2) {
+            GridRow {
+                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                caption("CPU")
+                ForEach(state.gpus) { gpu in
+                    caption(gpu.isAsleep ? "\(gpu.name) · uśpione" : gpu.name)
+                }
+            }
+            GridRow {
+                caption("Obciążenie")
+                percentText(state.overallUsage).modifier(TableValue())
+                ForEach(state.gpus) { gpu in
+                    percentText(gpu.utilization)
+                        .modifier(TableValue())
+                        .opacity(gpu.isAsleep ? 0.4 : 1)
+                }
+            }
+            GridRow {
+                caption("Temp.")
+                temperatureText(state.temperature).modifier(TableValue())
+                ForEach(state.gpus) { gpu in
+                    temperatureText(gpu.temperature)
+                        .modifier(TableValue())
+                        .opacity(gpu.isAsleep ? 0.4 : 1)
+                }
+            }
+            GridRow {
+                caption("Moc")
+                wattsText(state.cpuPower).modifier(TableValue())
+                ForEach(state.gpus) { gpu in
+                    wattsText(gpu.power)
+                        .modifier(TableValue())
+                        .opacity(gpu.isAsleep ? 0.4 : 1)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func percentText(_ value: Double?) -> some View {
+        if let value {
+            Text("\(value, specifier: "%.0f")%")
+        } else {
+            noData
+        }
+    }
+
+    private func caption(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize()
+    }
+
+    private struct TableValue: ViewModifier {
+        func body(content: Content) -> some View {
+            content
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+                .fixedSize()
         }
     }
 
@@ -116,9 +165,7 @@ struct ContentView: View {
     }
 
     private var noData: some View {
-        Text("brak danych")
-            .font(.system(size: 18, weight: .medium, design: .rounded))
-            .foregroundStyle(.secondary)
+        Text("—").foregroundStyle(.secondary)
     }
 
     private func colorForTemperature(_ t: Double) -> Color {
@@ -165,29 +212,29 @@ struct ContentView: View {
                 .foregroundStyle(.secondary.opacity(0.5))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
 
-            ForEach(Array(state.temperatureHistory.enumerated()), id: \.offset) { index, value in
-                LineMark(
-                    x: .value("Próbka", index),
-                    y: .value("Temperatura", value),
-                    series: .value("Czujnik", "CPU")
-                )
-                .foregroundStyle(by: .value("Czujnik", "CPU"))
-                .interpolationMethod(.catmullRom)
-            }
-
-            ForEach(Array(state.gpuTemperatureHistory.enumerated()), id: \.offset) { index, value in
-                LineMark(
-                    x: .value("Próbka", index),
-                    y: .value("Temperatura", value),
-                    series: .value("Czujnik", "GPU")
-                )
-                .foregroundStyle(by: .value("Czujnik", "GPU"))
-                .interpolationMethod(.catmullRom)
-            }
+            temperatureSeries("CPU", state.temperatureHistory)
+            temperatureSeries("GPU zintegr.", state.integratedGPUTemperatureHistory)
+            temperatureSeries("GPU dedyk.", state.discreteGPUTemperatureHistory)
         }
-        .chartForegroundStyleScale(["CPU": Color.orange, "GPU": Color.purple])
+        .chartForegroundStyleScale([
+            "CPU": Color.orange,
+            "GPU zintegr.": Color.purple,
+            "GPU dedyk.": Color.teal
+        ])
         .chartLegend(position: .top, alignment: .trailing)
         .chartYScale(domain: 30...105)
+    }
+
+    private func temperatureSeries(_ name: String, _ history: [Double]) -> some ChartContent {
+        ForEach(Array(history.enumerated()), id: \.offset) { index, value in
+            LineMark(
+                x: .value("Próbka", index),
+                y: .value("Temperatura", value),
+                series: .value("Czujnik", name)
+            )
+            .foregroundStyle(by: .value("Czujnik", name))
+            .interpolationMethod(.catmullRom)
+        }
     }
 
     private var processTable: some View {
