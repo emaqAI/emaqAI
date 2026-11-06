@@ -20,5 +20,7 @@
     <string>14.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <true/>
 </dict>
 </plist>
