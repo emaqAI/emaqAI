@@ -1,6 +1,5 @@
 import SwiftUI
 
-@main
 struct CPUMonitorApp: App {
     @StateObject private var state = AppState()
 

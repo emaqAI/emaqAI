@@ -7,6 +7,23 @@ struct BatteryReading {
     let watts: Double
 }
 
+/// Whole-Mac power draw: adapter input on AC, battery discharge on battery.
+struct PowerSnapshot {
+    let total: Double?
+    let isOnBattery: Bool
+    /// Set only while the battery is charging on AC.
+    let charging: Double?
+
+    static func read(smc: SMC, battery: BatteryReading? = BatteryMonitor().read()) -> PowerSnapshot {
+        let onBattery = battery.map { !$0.externalConnected } ?? false
+        if onBattery, let battery {
+            return PowerSnapshot(total: max(0, -battery.watts), isOnBattery: true, charging: nil)
+        }
+        let charging = battery.flatMap { $0.watts > 0.5 ? $0.watts : nil }
+        return PowerSnapshot(total: smc.adapterPower(), isOnBattery: false, charging: charging)
+    }
+}
+
 /// Reads the internal battery's live voltage and current. Returns nil on
 /// Macs without a battery.
 struct BatteryMonitor {

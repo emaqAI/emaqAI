@@ -27,6 +27,11 @@ struct ContentView: View {
                         .padding(.top, 6)
                 }
 
+                GroupBox("Statystyki roczne (ostatnie 365 dni)") {
+                    yearlyStats
+                        .padding(.top, 6)
+                }
+
                 GroupBox("Najbardziej obciążające procesy") {
                     processTable
                 }
@@ -262,6 +267,116 @@ struct ContentView: View {
             .foregroundStyle(by: .value("Czujnik", name))
             .interpolationMethod(.catmullRom)
         }
+    }
+
+    @ViewBuilder
+    private var yearlyStats: some View {
+        let days = StatsStore.lastYear(of: state.dailyStats)
+        if days.isEmpty {
+            Text("Zbieranie danych — pierwszy pomiar pojawi się w ciągu minuty.")
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            let summary = StatsSummary(days: days)
+            let range = chartRange(days)
+            VStack(alignment: .leading, spacing: 10) {
+                Grid(alignment: .leading, horizontalSpacing: 22, verticalSpacing: 6) {
+                    GridRow {
+                        yearStat("Zarejestrowano", formatDuration(hours: summary.loggedHours))
+                        yearStat("Zużyta energia", formatEnergy(kWh: summary.energyKWh))
+                        yearStat("Średni pobór", summary.averagePower.map { String(format: "%.1f W", $0) })
+                    }
+                    GridRow {
+                        yearStat("Śr. temp. CPU", summary.averageCPUTemperature.map { String(format: "%.1f°C", $0) })
+                        yearStat("Maks. temp. CPU", summary.maxCPUTemperature.map { String(format: "%.1f°C", $0) })
+                        yearStat("Czas ≥ \(Int(StatsStore.hotThreshold))°C", formatDuration(hours: summary.hotHours))
+                    }
+                }
+                dailyTemperatureChart(days)
+                    .chartXScale(domain: range)
+                    .chartXAxis { dayAxis }
+                    .frame(height: 90)
+                dailyEnergyChart(days)
+                    .chartXScale(domain: range)
+                    .chartXAxis { dayAxis }
+                    .frame(height: 70)
+            }
+        }
+    }
+
+    /// At least the last 30 days, growing to the full year as data piles up,
+    /// so a single day of data isn't stretched across the whole axis.
+    private func chartRange(_ days: [DailyStats]) -> ClosedRange<Date> {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let monthAgo = calendar.date(byAdding: .day, value: -29, to: today) ?? today
+        let first = days.compactMap(\.date).min() ?? today
+        let end = calendar.date(byAdding: .day, value: 1, to: today) ?? today
+        return min(first, monthAgo)...end
+    }
+
+    private var dayAxis: some AxisContent {
+        AxisMarks {
+            AxisGridLine()
+            AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+        }
+    }
+
+    private func formatDuration(hours: Double) -> String {
+        hours < 1 ? "\(Int((hours * 60).rounded())) min" : String(format: "%.1f h", hours)
+    }
+
+    private func formatEnergy(kWh: Double) -> String {
+        kWh < 1 ? String(format: "%.0f Wh", kWh * 1000) : String(format: "%.2f kWh", kWh)
+    }
+
+    private func yearStat(_ label: String, _ value: String?) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value ?? "—")
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+        }
+        .fixedSize()
+    }
+
+    private func dailyTemperatureChart(_ days: [DailyStats]) -> some View {
+        Chart {
+            RuleMark(y: .value("Próg", StatsStore.hotThreshold))
+                .foregroundStyle(.secondary.opacity(0.5))
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+            ForEach(days) { day in
+                if let date = day.date, let average = day.cpuTemperatureAverage {
+                    LineMark(x: .value("Dzień", date, unit: .day),
+                             y: .value("°C", average),
+                             series: .value("Seria", "Średnia"))
+                        .foregroundStyle(by: .value("Seria", "Średnia temp. CPU"))
+                        .symbol(.circle)
+                    LineMark(x: .value("Dzień", date, unit: .day),
+                             y: .value("°C", day.cpuTemperatureMax),
+                             series: .value("Seria", "Maks."))
+                        .foregroundStyle(by: .value("Seria", "Maks. temp. CPU"))
+                        .symbol(.circle)
+                }
+            }
+        }
+        .chartForegroundStyleScale(["Średnia temp. CPU": Color.orange, "Maks. temp. CPU": Color.red])
+        .chartLegend(position: .top, alignment: .trailing)
+        .chartYScale(domain: 30...105)
+    }
+
+    private func dailyEnergyChart(_ days: [DailyStats]) -> some View {
+        Chart {
+            ForEach(days) { day in
+                if let date = day.date {
+                    BarMark(x: .value("Dzień", date, unit: .day),
+                            y: .value("Wh", day.energyWh))
+                        .foregroundStyle(.blue.opacity(0.7))
+                }
+            }
+        }
+        .chartYAxisLabel("Energia (Wh)")
     }
 
     private var processTable: some View {

@@ -19,6 +19,8 @@ final class AppState: ObservableObject {
     /// Everything not broken out separately (display, RAM, SSD, Wi-Fi,
     /// fans, conversion losses), so the component powers add up to the total.
     @Published var otherPower: Double?
+    /// Daily totals written by the background logger (`--log-sample`).
+    @Published var dailyStats: [DailyStats] = []
     @Published var topProcesses: [ProcessUsage] = []
     @Published var coreHistory: [[Double]] = [] // rolling history per core, for sparkline-style chart
     @Published var temperatureHistory: [Double] = []
@@ -39,6 +41,7 @@ final class AppState: ObservableObject {
     private let historyLength = 30
     private var isSamplingProcesses = false
     private var lastProcessSample = Date.distantPast
+    private var lastStatsLoad = Date.distantPast
     // `top -l 2` itself costs noticeable CPU, so even at a 1s refresh the
     // process list is never resampled more often than this.
     private let minProcessSampleInterval: TimeInterval = 5
@@ -106,15 +109,10 @@ final class AppState: ObservableObject {
     }
 
     private func updatePowerBreakdown(_ smc: SMC) {
-        let battery = batteryMonitor.read()
-        isOnBattery = battery.map { !$0.externalConnected } ?? false
-        if isOnBattery, let battery {
-            totalPower = max(0, -battery.watts)
-            batteryChargingPower = nil
-        } else {
-            totalPower = smc.adapterPower()
-            batteryChargingPower = battery.flatMap { $0.watts > 0.5 ? $0.watts : nil }
-        }
+        let power = PowerSnapshot.read(smc: smc, battery: batteryMonitor.read())
+        isOnBattery = power.isOnBattery
+        totalPower = power.total
+        batteryChargingPower = power.charging
         // Sensors are sampled at slightly different instants, so the
         // remainder can briefly come out negative; clamp it.
         let accounted = (cpuPower ?? 0) + gpus.compactMap(\.power).reduce(0, +) + (batteryChargingPower ?? 0)
@@ -131,6 +129,11 @@ final class AppState: ObservableObject {
         cpuPower = smc.cpuPower()
         gpus = sampleGPUs(smc)
         updatePowerBreakdown(smc)
+        // The logger only adds a sample per minute, so rereading more often is pointless.
+        if Date().timeIntervalSince(lastStatsLoad) >= StatsStore.sampleInterval {
+            dailyStats = StatsStore.load()
+            lastStatsLoad = Date()
+        }
         if let temperature { appendCapped(temperature, to: &temperatureHistory) }
         if let t = gpus.first(where: { $0.kind == .integrated })?.temperature {
             appendCapped(t, to: &integratedGPUTemperatureHistory)
