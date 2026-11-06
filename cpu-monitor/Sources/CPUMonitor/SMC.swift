@@ -106,8 +106,8 @@ final class SMC {
         return output.keyInfo
     }
 
-    /// Reads a floating point temperature value (°C) for the given 4-char SMC key.
-    func readTemperature(_ key: String) -> Double? {
+    /// Raw value of a key together with its SMC data type (e.g. "sp78", "flt ").
+    private func readKey(_ key: String) -> (dataType: UInt32, output: SMCParamStruct)? {
         guard let keyInfo = readKeyInfo(key), keyInfo.dataSize > 0 else { return nil }
 
         var input = SMCParamStruct()
@@ -116,6 +116,12 @@ final class SMC {
         input.data8 = Selector.kSMCReadKey.rawValue
 
         guard let output = callSMC(&input), output.result == 0 else { return nil }
+        return (keyInfo.dataType, output)
+    }
+
+    /// Reads a floating point temperature value (°C) for the given 4-char SMC key.
+    func readTemperature(_ key: String) -> Double? {
+        guard let (_, output) = readKey(key) else { return nil }
 
         let bytes = [output.bytes.0, output.bytes.1, output.bytes.2, output.bytes.3]
 
@@ -136,7 +142,7 @@ final class SMC {
     func cpuTemperature() -> Double? {
         let coreKeys = [
             "TC0D", "TC0E", "TC0F", "TC0G", "TC0H", // Intel per-core die sensors
-            "TCXC", "TCGC",
+            "TCXC",
             "Tp09", "Tp0T", // Apple Silicon P-cores
             "Te05", "Te0L", // Apple Silicon E-cores
             "Tp01", "Tp05"
@@ -148,17 +154,23 @@ final class SMC {
         return readTemperature("TC0P")
     }
 
+    /// Hottest GPU die sensor. On dual-GPU Intel MacBook Pros the discrete GPU
+    /// (TG0D) reads a flat 35°C while powered down, so the integrated GPU on
+    /// the CPU package (TCGC) is usually the one that matters. TG1D is skipped:
+    /// on this hardware it returns a constant out-of-range value.
+    func gpuTemperature() -> Double? {
+        let gpuKeys = [
+            "TG0D", "TCGC",                 // Intel Macs: discrete GPU die, integrated GPU
+            "Tg05", "Tg0D", "Tg0L", "Tg0T"  // Apple Silicon GPU clusters
+        ]
+        let readings = gpuKeys.compactMap { readTemperature($0) }
+        if let hottest = readings.max() { return hottest }
+        return readTemperature("TG0P")
+    }
+
     /// Reads a fan RPM value ("fpe2" fixed point: value = raw / 4).
     func readFanRPM(_ key: String) -> Double? {
-        guard let keyInfo = readKeyInfo(key), keyInfo.dataSize > 0 else { return nil }
-
-        var input = SMCParamStruct()
-        input.key = fourCharCode(key)
-        input.keyInfo = keyInfo
-        input.data8 = Selector.kSMCReadKey.rawValue
-
-        guard let output = callSMC(&input), output.result == 0 else { return nil }
-
+        guard let (_, output) = readKey(key) else { return nil }
         let raw = (UInt16(output.bytes.0) << 8) | UInt16(output.bytes.1)
         return Double(raw) / 4.0
     }
@@ -168,4 +180,26 @@ final class SMC {
         let readings = ["F0Ac", "F1Ac", "F2Ac"].compactMap { readFanRPM($0) }
         return readings.max()
     }
+
+    /// Reads a power value in watts. Power keys come as either big-endian
+    /// "sp87" fixed point or little-endian "flt " depending on the key.
+    func readPower(_ key: String) -> Double? {
+        guard let (dataType, output) = readKey(key) else { return nil }
+        let b = output.bytes
+        switch dataType {
+        case fourCharCode("sp87"):
+            return Double(Int16(bitPattern: UInt16(b.0) << 8 | UInt16(b.1))) / 128
+        case fourCharCode("flt "):
+            let bits = UInt32(b.0) | UInt32(b.1) << 8 | UInt32(b.2) << 16 | UInt32(b.3) << 24
+            return Double(Float(bitPattern: bits))
+        default:
+            return nil
+        }
+    }
+
+    /// Whole CPU package: cores, integrated GPU and uncore.
+    func cpuPackagePower() -> Double? { readPower("PCPT") }
+
+    /// Whole machine. On AC this tracks the adapter input (PDTR) one sample later.
+    func systemPower() -> Double? { readPower("PSTR") }
 }
