@@ -12,7 +12,13 @@ final class AppState: ObservableObject {
     @Published var gpus: [GPUInfo] = []
     @Published var fanRPMs: [Double] = []
     @Published var cpuPower: Double?
-    @Published var systemPower: Double?
+    /// Whole Mac: adapter input on AC, battery discharge on battery.
+    @Published var totalPower: Double?
+    @Published var isOnBattery = false
+    @Published var batteryChargingPower: Double?
+    /// Everything not broken out separately (display, RAM, SSD, Wi-Fi,
+    /// fans, conversion losses), so the component powers add up to the total.
+    @Published var otherPower: Double?
     @Published var topProcesses: [ProcessUsage] = []
     @Published var coreHistory: [[Double]] = [] // rolling history per core, for sparkline-style chart
     @Published var temperatureHistory: [Double] = []
@@ -28,6 +34,7 @@ final class AppState: ObservableObject {
     private let coreMonitor = CoreUsageMonitor()
     private let processMonitor = ProcessMonitor()
     private let gpuMonitor = GPUMonitor()
+    private let batteryMonitor = BatteryMonitor()
     private var timer: Timer?
     private let historyLength = 30
     private var isSamplingProcesses = false
@@ -98,6 +105,22 @@ final class AppState: ObservableObject {
         }
     }
 
+    private func updatePowerBreakdown(_ smc: SMC) {
+        let battery = batteryMonitor.read()
+        isOnBattery = battery.map { !$0.externalConnected } ?? false
+        if isOnBattery, let battery {
+            totalPower = max(0, -battery.watts)
+            batteryChargingPower = nil
+        } else {
+            totalPower = smc.adapterPower()
+            batteryChargingPower = battery.flatMap { $0.watts > 0.5 ? $0.watts : nil }
+        }
+        // Sensors are sampled at slightly different instants, so the
+        // remainder can briefly come out negative; clamp it.
+        let accounted = (cpuPower ?? 0) + gpus.compactMap(\.power).reduce(0, +) + (batteryChargingPower ?? 0)
+        otherPower = totalPower.map { max(0, $0 - accounted) }
+    }
+
     private func tick() {
         let usages = coreMonitor.sample()
         coreUsages = usages
@@ -105,9 +128,9 @@ final class AppState: ObservableObject {
         let smc = SMC.shared
         temperature = smc.cpuTemperature()
         fanRPMs = smc.fanRPMs()
-        cpuPower = smc.cpuCorePower()
-        systemPower = smc.systemPower()
+        cpuPower = smc.cpuPower()
         gpus = sampleGPUs(smc)
+        updatePowerBreakdown(smc)
         if let temperature { appendCapped(temperature, to: &temperatureHistory) }
         if let t = gpus.first(where: { $0.kind == .integrated })?.temperature {
             appendCapped(t, to: &integratedGPUTemperatureHistory)

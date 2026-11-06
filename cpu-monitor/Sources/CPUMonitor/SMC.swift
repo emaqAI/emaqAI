@@ -196,14 +196,19 @@ final class SMC {
         }
     }
 
-    /// CPU cores only, so it can be shown next to the integrated GPU
-    /// without double counting (the package total, PCPT, includes both).
-    func cpuCorePower() -> Double? { readPower("PCPC") }
+    /// CPU package minus its integrated GPU: cores plus uncore (memory
+    /// controller, cache), so CPU + integrated GPU adds up to the package.
+    func cpuPower() -> Double? {
+        guard let package = readPower("PCPT") else { return readPower("PCPC") }
+        return max(0, package - (integratedGPUPower() ?? 0))
+    }
 
     func integratedGPUPower() -> Double? { readPower("PCPG") }
 
     func discreteGPUPower() -> Double? { readPower("PG0R") }
 
-    /// Whole machine. On AC this tracks the adapter input (PDTR) one sample later.
-    func systemPower() -> Double? { readPower("PSTR") }
+    /// Power drawn from the AC adapter. PSTR is deliberately not used: on
+    /// this machine it reads well above the adapter input while the battery
+    /// is neither charging nor discharging.
+    func adapterPower() -> Double? { readPower("PDTR") }
 }

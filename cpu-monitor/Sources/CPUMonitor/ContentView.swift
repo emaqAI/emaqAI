@@ -39,34 +39,42 @@ struct ContentView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 18) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 18) {
-                    ForEach(Array(state.fanRPMs.enumerated()), id: \.offset) { index, rpm in
-                        stat("Wentylator \(index + 1)") {
-                            Text("\(Int(rpm)) RPM")
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 18) {
+                stat(state.isOnBattery ? "Pobór całego Maca (z baterii)" : "Pobór całego Maca (z zasilacza)") {
+                    wattsText(state.totalPower)
+                }
+                .help("Suma wiersza „Moc” w tabeli poniżej")
+                ForEach(Array(state.fanRPMs.enumerated()), id: \.offset) { index, rpm in
+                    stat("Wentylator \(index + 1)") {
+                        Text("\(Int(rpm)) RPM")
+                    }
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text("Rdzenie logiczne: \(state.coreUsages.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Picker("Odświeżanie", selection: $state.refreshInterval) {
+                        ForEach(AppState.refreshOptions, id: \.self) { seconds in
+                            Text("co \(Int(seconds)) s").tag(seconds)
                         }
                     }
-                    stat("Moc całkowita") {
-                        wattsText(state.systemPower)
-                    }
+                    .pickerStyle(.menu)
+                    .fixedSize()
                 }
-                componentTable
             }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 6) {
-                Text("Rdzenie logiczne: \(state.coreUsages.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Picker("Odświeżanie", selection: $state.refreshInterval) {
-                    ForEach(AppState.refreshOptions, id: \.self) { seconds in
-                        Text("co \(Int(seconds)) s").tag(seconds)
-                    }
-                }
-                .pickerStyle(.menu)
-                .fixedSize()
-            }
+            componentTable
         }
+    }
+
+    /// Power-only columns that make the "Moc" row add up to the total.
+    private var extraPowerColumns: [(label: String, watts: Double?)] {
+        var columns: [(label: String, watts: Double?)] = [("Ekran, RAM, dysk…", state.otherPower)]
+        if let charging = state.batteryChargingPower {
+            columns.append(("Ładowanie baterii", charging))
+        }
+        return columns
     }
 
     private var componentTable: some View {
@@ -75,17 +83,26 @@ struct ContentView: View {
                 Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
                 caption("CPU")
                 ForEach(state.gpus) { gpu in
-                    caption(gpu.isAsleep ? "\(gpu.name) · uśpione" : gpu.name)
+                    caption(gpu.name)
+                }
+                ForEach(extraPowerColumns.indices, id: \.self) { index in
+                    caption(extraPowerColumns[index].label)
                 }
             }
             GridRow {
                 caption("Obciążenie")
                 percentText(state.overallUsage).modifier(TableValue())
                 ForEach(state.gpus) { gpu in
-                    percentText(gpu.utilization)
-                        .modifier(TableValue())
-                        .opacity(gpu.isAsleep ? 0.4 : 1)
+                    Group {
+                        if gpu.isAsleep {
+                            Text("uśpione").foregroundStyle(.secondary)
+                        } else {
+                            percentText(gpu.utilization)
+                        }
+                    }
+                    .modifier(TableValue())
                 }
+                emptyCells(extraPowerColumns.count)
             }
             GridRow {
                 caption("Temp.")
@@ -95,6 +112,7 @@ struct ContentView: View {
                         .modifier(TableValue())
                         .opacity(gpu.isAsleep ? 0.4 : 1)
                 }
+                emptyCells(extraPowerColumns.count)
             }
             GridRow {
                 caption("Moc")
@@ -104,7 +122,16 @@ struct ContentView: View {
                         .modifier(TableValue())
                         .opacity(gpu.isAsleep ? 0.4 : 1)
                 }
+                ForEach(extraPowerColumns.indices, id: \.self) { index in
+                    wattsText(extraPowerColumns[index].watts).modifier(TableValue())
+                }
             }
+        }
+    }
+
+    private func emptyCells(_ count: Int) -> some View {
+        ForEach(0..<count, id: \.self) { _ in
+            Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
         }
     }
 
