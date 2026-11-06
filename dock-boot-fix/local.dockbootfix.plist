@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.dockbootfix</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/dock-boot-fix.sh</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/tomekemaq/Library/Logs/dock-boot-fix.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/tomekemaq/Library/Logs/dock-boot-fix.log</string>
+</dict>
+</plist>
